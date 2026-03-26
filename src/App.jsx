@@ -49,17 +49,17 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* Admin routes */}
-        <Route path="/login"        element={isAdmin  ? <Navigate to="/" /> : <LoginPage />} />
-        <Route path="/"             element={isAdmin  ? <ProjectsPage />    : <Navigate to={session ? '/client/scan' : '/client/login'} />} />
-        <Route path="/project/:id"  element={isAdmin  ? <ProjectDetailPage /> : <Navigate to={session ? '/client/scan' : '/client/login'} />} />
+        <Route path="/login"        element={!session ? <LoginPage /> : <Navigate to={isAdmin ? '/' : '/client/scan'} />} />
+        <Route path="/"             element={isAdmin  ? <ProjectsPage />    : <Navigate to={session ? '/client/scan' : '/login'} />} />
+        <Route path="/project/:id"  element={isAdmin  ? <ProjectDetailPage /> : <Navigate to={session ? '/client/scan' : '/login'} />} />
 
         {/* Client routes */}
-        <Route path="/client/login" element={session  ? <Navigate to={isAdmin ? '/' : '/client/scan'} /> : <ClientLoginPage />} />
+        <Route path="/client/login" element={!session ? <ClientLoginPage /> : <Navigate to={isAdmin ? '/' : '/client/scan'} />} />
         <Route path="/client/scan"  element={session  ? <ClientScanPage />  : <Navigate to="/client/login" />} />
         <Route path="/client/door/:assetId" element={session ? <DoorResultPage /> : <Navigate to="/client/login" />} />
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to={session ? (isAdmin ? '/' : '/client/scan') : '/client/login'} />} />
+        <Route path="*" element={<Navigate to={session ? (isAdmin ? '/' : '/client/scan') : '/login'} />} />
       </Routes>
     </BrowserRouter>
   )
