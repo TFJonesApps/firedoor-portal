@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { generateProjectReport } from '../lib/generateReport'
 
 const PASS_COLOR  = '#4CAF50'
 const FAIL_COLOR  = '#F44336'
@@ -19,6 +20,7 @@ export default function ProjectDetailPage() {
   const [editing, setEditing]         = useState(false)
   const [editForm, setEditForm]       = useState({})
   const [saving, setSaving]           = useState(false)
+  const [generatingPdf, setGeneratingPdf] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -107,7 +109,20 @@ export default function ProjectDetailPage() {
             </div>
           )}
           {!editing && (
-            <button style={styles.editBtn} onClick={startEdit}>Edit Project</button>
+            <div style={{ display: 'flex', gap: 8, alignSelf: 'center' }}>
+              <button style={styles.editBtn} onClick={startEdit}>Edit Project</button>
+              <button
+                style={{ ...styles.editBtn, background: '#EEFF00', opacity: generatingPdf ? 0.6 : 1 }}
+                disabled={generatingPdf || inspections.length === 0}
+                onClick={async () => {
+                  setGeneratingPdf(true)
+                  try { await generateProjectReport(project, inspections) } catch (e) { console.error(e) }
+                  setGeneratingPdf(false)
+                }}
+              >
+                {generatingPdf ? 'Generating…' : '⬇ Download PDF'}
+              </button>
+            </div>
           )}
         </div>
       </div>
