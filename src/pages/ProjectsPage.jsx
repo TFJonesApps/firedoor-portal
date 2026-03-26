@@ -41,9 +41,10 @@ export default function ProjectsPage() {
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerInner}>
-          <div>
-            <h1 style={styles.title}>🔥 TF Jones</h1>
-            <p style={styles.subtitle}>Fire Door Inspection Portal</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <img src="/tfj_logo.png" alt="TF Jones" style={{ height: 36, objectFit: 'contain' }} />
+            <div style={{ width: 1, height: 32, background: '#EEFF00', opacity: 0.4 }} />
+            <p style={{ color: '#8A9BAD', fontSize: 13, margin: 0 }}>Fire Door Inspection Portal</p>
           </div>
           <div style={styles.headerRight}>
             <span style={styles.userEmail}>{user?.email}</span>

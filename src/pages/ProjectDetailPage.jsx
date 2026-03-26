@@ -72,6 +72,8 @@ export default function ProjectDetailPage() {
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerInner}>
+          <img src="/tfj_logo.png" alt="TF Jones" style={{ height: 30, objectFit: 'contain', alignSelf: 'center' }} />
+          <div style={{ width: 1, height: 28, background: '#EEFF00', opacity: 0.4, alignSelf: 'center' }} />
           <button style={styles.backBtn} onClick={() => navigate('/')}>← Back</button>
           {!editing ? (
             <div style={{ flex: 1 }}>
@@ -253,7 +255,7 @@ function Spinner() {
 const styles = {
   page: { minHeight: '100vh', background: '#0D1F35' },
   header: { background: '#1A3A5C', padding: '0 24px', borderBottom: '1px solid #162840' },
-  headerInner: { maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'flex-start', gap: 16, padding: '16px 0', flexWrap: 'wrap' },
+  headerInner: { maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'flex-start', gap: 16, padding: '16px 0', flexWrap: 'wrap', position: 'relative' },
   backBtn: { background: 'transparent', border: '1px solid #8A9BAD', borderRadius: 6, padding: '6px 14px', color: '#8A9BAD', fontSize: 13, whiteSpace: 'nowrap', alignSelf: 'center' },
   projectTitle: { fontSize: 22, fontWeight: 700, color: '#fff', margin: 0 },
   editBtn: { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 6, padding: '8px 18px', fontWeight: 700, fontSize: 13, alignSelf: 'center', whiteSpace: 'nowrap' },

@@ -20,10 +20,9 @@ export default function LoginPage() {
     <div style={styles.page}>
       <div style={styles.card}>
         <div style={styles.header}>
-          <div style={styles.logoMark}>🔥</div>
-          <h1 style={styles.title}>TF Jones</h1>
-          <p style={styles.subtitle}>Fire Door Inspection Portal</p>
+          <img src="/tfj_logo.png" alt="TF Jones" style={styles.logo} />
           <div style={styles.bar} />
+          <p style={styles.subtitle}>Fire Door Inspection Portal</p>
         </div>
 
         <form onSubmit={handleLogin} style={styles.form}>
@@ -76,10 +75,9 @@ const styles = {
     boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
   },
   header: { textAlign: 'center', marginBottom: 32 },
-  logoMark: { fontSize: 40, marginBottom: 12 },
-  title: { fontSize: 26, fontWeight: 700, color: '#fff', margin: 0 },
-  subtitle: { color: '#8A9BAD', fontSize: 14, marginTop: 4 },
-  bar: { width: 40, height: 3, background: '#EEFF00', borderRadius: 2, margin: '12px auto 0' },
+  logo: { height: 48, maxWidth: 200, objectFit: 'contain', marginBottom: 16 },
+  subtitle: { color: '#8A9BAD', fontSize: 14, marginTop: 10 },
+  bar: { width: 48, height: 3, background: '#EEFF00', borderRadius: 2, margin: '0 auto' },
   form: { display: 'flex', flexDirection: 'column', gap: 12 },
   label: { color: '#8A9BAD', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' },
   input: {
