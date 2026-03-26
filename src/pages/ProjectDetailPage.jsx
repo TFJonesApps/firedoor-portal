@@ -51,6 +51,7 @@ export default function ProjectDetailPage() {
       postcode:     project.postcode     || '',
       client_name:  project.client_name  || '',
       client_logo:  project.client_logo  || '',
+      client_id:    project.client_id    || null,
     })
     setEditing(true)
   }
@@ -114,8 +115,9 @@ export default function ProjectDetailPage() {
                     const selected = clients.find(c => c.name === e.target.value)
                     setEditForm(f => ({
                       ...f,
-                      client_name: e.target.value,
-                      client_logo: selected?.logo_filename || '',
+                      client_name:  e.target.value,
+                      client_logo:  selected?.logo_filename || '',
+                      client_id:    selected?.id || null,
                     }))
                   }}
                 >

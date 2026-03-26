@@ -16,25 +16,34 @@ export default function DoorResultPage() {
   async function load() {
     setState('loading')
     try {
-      // Find most recent inspection for this asset
       const decoded = decodeURIComponent(assetId)
-      const { data: ins, error: insErr } = await supabase
+
+      // Get current user's client_id to scope the lookup
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role, client_id')
+        .eq('id', user.id)
+        .single()
+
+      // Build inspection query scoped to client's projects
+      let query = supabase
         .from('inspections')
-        .select('*')
+        .select('*, projects!inner(id, name, address, postcode, is_published, client_id)')
         .eq('door_asset_id', decoded)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single()
+
+      // Scope to client's projects unless admin
+      if (profile?.role !== 'admin' && profile?.client_id) {
+        query = query.eq('projects.client_id', profile.client_id)
+      }
+
+      const { data: ins, error: insErr } = await query.single()
 
       if (insErr || !ins) { setState('notfound'); return }
 
-      // Check if project has been released to clients
-      const { data: proj } = await supabase
-        .from('projects')
-        .select('id, name, address, postcode, is_published')
-        .eq('id', ins.project_id)
-        .single()
-
+      const proj = ins.projects
       setInspection(ins)
       setProject(proj)
       setState(proj?.is_published ? 'found' : 'pending')
