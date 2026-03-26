@@ -204,8 +204,8 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
   doc.text(clientLabel, logoBoxX, y + 5)
 
   if (clientLogo) {
-    // Fixed 40×20mm box for all logos — scale to fit, preserve aspect ratio
-    const BOX_W = 40, BOX_H = 20
+    // Fixed 40×28mm box for all logos — scale to fit, preserve aspect ratio
+    const BOX_W = 40, BOX_H = 28
     const ratio = clientLogo.width / clientLogo.height
     let dw = BOX_W, dh = BOX_W / ratio
     if (dh > BOX_H) { dh = BOX_H; dw = dh * ratio }
@@ -232,8 +232,8 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
     doc.text(addr, ML, nameBottom + 3)
   }
 
-  // Advance y past whichever column is taller (right col: label 5 + name 5 + logo 20 + gap 6 = 36)
-  y = Math.max(nameBottom + (addr ? 10 : 4), y + 36)
+  // Advance y past whichever column is taller (right col: label 5 + name 5 + logo 28 + gap 6 = 44)
+  y = Math.max(nameBottom + (addr ? 10 : 4), y + 44)
 
   y += 4
 
