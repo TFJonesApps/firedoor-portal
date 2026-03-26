@@ -604,8 +604,8 @@ async function loadImage(url) {
   })
 }
 
-// For logos with transparency — PNG to preserve alpha channel
-// Returns { dataUrl, width, height } so caller can size by aspect ratio
+// For logos with transparency — PNG, auto-trims whitespace so the content fills the box
+// Returns { dataUrl, width, height }
 async function loadLogoImage(url) {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -615,9 +615,51 @@ async function loadLogoImage(url) {
       canvas.width  = img.width
       canvas.height = img.height
       canvas.getContext('2d').drawImage(img, 0, 0)
-      resolve({ dataUrl: canvas.toDataURL('image/png'), width: img.width, height: img.height })
+
+      // Auto-trim white / transparent padding
+      const trimmed = trimWhitespace(canvas)
+      resolve({ dataUrl: trimmed.toDataURL('image/png'), width: trimmed.width, height: trimmed.height })
     }
     img.onerror = reject
     img.src = url + (url.includes('?') ? '&' : '?') + `_=${Date.now()}`
   })
+}
+
+// Crop away white/transparent border pixels so the logo fills its display box
+function trimWhitespace(canvas) {
+  const ctx  = canvas.getContext('2d')
+  const w    = canvas.width
+  const h    = canvas.height
+  const data = ctx.getImageData(0, 0, w, h).data
+
+  let top = h, bottom = 0, left = w, right = 0
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4
+      const a = data[i + 3]
+      const r = data[i], g = data[i + 1], b = data[i + 2]
+      const isBlank = a < 15 || (r > 238 && g > 238 && b > 238)
+      if (!isBlank) {
+        if (y < top)    top    = y
+        if (y > bottom) bottom = y
+        if (x < left)   left   = x
+        if (x > right)  right  = x
+      }
+    }
+  }
+
+  if (top > bottom || left > right) return canvas  // nothing to trim
+
+  const pad = 6  // small breathing room
+  const cx = Math.max(0, left - pad)
+  const cy = Math.max(0, top  - pad)
+  const cw = Math.min(w, right  - left + pad * 2 + 1)
+  const ch = Math.min(h, bottom - top  + pad * 2 + 1)
+
+  const out = document.createElement('canvas')
+  out.width  = cw
+  out.height = ch
+  out.getContext('2d').drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch)
+  return out
 }
