@@ -200,16 +200,15 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
   doc.setFontSize(9)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...DARK)
-  doc.text(project.client_name || '—', logoBoxX, y + 5)
+  const clientLabel = project.client_name || '—'
+  doc.text(clientLabel, logoBoxX, y + 5)
 
   if (clientLogo) {
-    // Scale to fit inside LOGO_BOX_W × LOGO_BOX_H, preserving aspect ratio
-    const ratio   = clientLogo.width / clientLogo.height
-    let dw = LOGO_BOX_W
-    let dh = dw / ratio
-    if (dh > LOGO_BOX_H) { dh = LOGO_BOX_H; dw = dh * ratio }
-    const lx = logoBoxX + (LOGO_BOX_W - dw) / 2
-    doc.addImage(clientLogo.dataUrl, 'PNG', lx, y + 9, dw, dh)
+    // Width = exact width of the client name text; height = same (square presentation)
+    const nameW = doc.getTextWidth(clientLabel)
+    const dw    = nameW
+    const dh    = dw   // square
+    doc.addImage(clientLogo.dataUrl, 'PNG', logoBoxX, y + 9, dw, dh)
   }
 
   // ── Left column: project name + address ──────────────────────────────────
@@ -233,7 +232,8 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
   }
 
   // Advance y past whichever column is taller
-  y = Math.max(nameBottom + (addr ? 10 : 4), y + 9 + LOGO_BOX_H + 6)
+  const logoBlockH = clientLogo ? (() => { const nw = 9; return 9 + nw + 6 })() : 0
+  y = Math.max(nameBottom + (addr ? 10 : 4), y + 9 + (clientLogo ? doc.getTextWidth(project.client_name || '—') : 0) + 6)
 
   y += 4
 
