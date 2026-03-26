@@ -22,7 +22,7 @@ const CW = W - ML - MR   // 178mm
 // ─── Entry point ──────────────────────────────────────────────────────────────
 export async function generateProjectReport(project, inspections) {
   const doc  = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-  const logo = await loadImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null)
+  const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null)
 
   let pageNum = 1
   const totalPages = () => pageNum  // resolved later — we'll do a two-pass count
@@ -57,7 +57,7 @@ function drawPageHeader(doc, logo, rightTitle, rightSub) {
 
   // Full wordmark logo — wide landscape, navy on transparent, sits on white
   if (logo) {
-    doc.addImage(logo, 'PNG', ML, 3, 55, 20)
+    doc.addImage(logo, 'PNG', ML, 4, 44, 16)
   } else {
     doc.setFontSize(13)
     doc.setFont('helvetica', 'bold')
@@ -571,7 +571,9 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
   drawFooter(doc, pageNum, totalPages)
 }
 
-// ─── Image loader ─────────────────────────────────────────────────────────────
+// ─── Image loaders ────────────────────────────────────────────────────────────
+
+// For photos — JPEG compression
 async function loadImage(url) {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -582,6 +584,23 @@ async function loadImage(url) {
       canvas.height = img.height
       canvas.getContext('2d').drawImage(img, 0, 0)
       resolve(canvas.toDataURL('image/jpeg', 0.85))
+    }
+    img.onerror = reject
+    img.src = url + (url.includes('?') ? '&' : '?') + `_=${Date.now()}`
+  })
+}
+
+// For logos with transparency — PNG to preserve alpha channel
+async function loadLogoImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width  = img.width
+      canvas.height = img.height
+      canvas.getContext('2d').drawImage(img, 0, 0)
+      resolve(canvas.toDataURL('image/png'))
     }
     img.onerror = reject
     img.src = url + (url.includes('?') ? '&' : '?') + `_=${Date.now()}`
