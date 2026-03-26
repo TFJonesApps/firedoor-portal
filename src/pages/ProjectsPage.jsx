@@ -82,7 +82,7 @@ export default function ProjectsPage() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  {['Project', 'Address', 'Client', 'Engineer', 'Created'].map(h => (
+                  {['Project', 'Address', 'Client', 'Inspector', 'Created'].map(h => (
                     <th key={h} style={styles.th}>{h}</th>
                   ))}
                 </tr>
@@ -98,14 +98,16 @@ export default function ProjectsPage() {
                       <span style={styles.projectName}>{p.name}</span>
                     </td>
                     <td style={styles.td}>
-                      <span style={{ color: '#8A9BAD' }}>{[p.address, p.postcode].filter(Boolean).join(', ') || '—'}</span>
+                      <span style={{ color: '#CBD5E1' }}>{[p.address, p.postcode].filter(Boolean).join(', ') || '—'}</span>
                     </td>
                     <td style={styles.td}>
-                      <span style={{ color: '#EEFF00', fontSize: 13 }}>{p.client_name || '—'}</span>
+                      <span style={{ color: '#EEFF00', fontWeight: 600 }}>{p.client_name || '—'}</span>
                     </td>
-                    <td style={styles.td}>{p.engineer_name || '—'}</td>
                     <td style={styles.td}>
-                      <span style={{ color: '#8A9BAD', fontSize: 13 }}>
+                      <span style={{ color: '#fff', fontWeight: 500 }}>{p.engineer_name || '—'}</span>
+                    </td>
+                    <td style={styles.td}>
+                      <span style={{ color: '#94A3B8' }}>
                         {new Date(p.created_at).toLocaleDateString('en-GB')}
                       </span>
                     </td>
@@ -150,7 +152,7 @@ const styles = {
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { background: '#162840', padding: '12px 16px', textAlign: 'left', fontSize: 12, color: '#8A9BAD', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #1A3A5C' },
   row: { cursor: 'pointer', borderBottom: '1px solid #1A3A5C', transition: 'background 0.15s' },
-  td: { padding: '14px 16px', fontSize: 14, color: '#fff', verticalAlign: 'middle' },
-  projectName: { fontWeight: 600, fontSize: 15 },
+  td: { padding: '16px 16px', fontSize: 15, color: '#fff', verticalAlign: 'middle' },
+  projectName: { fontWeight: 700, fontSize: 16, color: '#fff', letterSpacing: '-0.01em' },
   center: { textAlign: 'center', padding: 60 },
 }
