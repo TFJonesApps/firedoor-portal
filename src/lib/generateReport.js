@@ -198,12 +198,14 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
   doc.text('PREPARED FOR', logoBoxX, y)
 
   if (clientLogo) {
-    // 55×35mm box — logo starts right under the label, no client name text
-    const BOX_W = 55, BOX_H = 35
-    const ratio = clientLogo.width / clientLogo.height
-    let dw = BOX_W, dh = BOX_W / ratio
-    if (dh > BOX_H) { dh = BOX_H; dw = dh * ratio }
-    doc.addImage(clientLogo.dataUrl, 'PNG', logoBoxX, y + 4, dw, dh)
+    const ratio     = clientLogo.width / clientLogo.height
+    const MAX_W     = 55
+    // Square/portrait logos (badges) get more height; wide logos get less
+    const targetH   = ratio < 1.5 ? 42 : 22
+    let dh = targetH
+    let dw = dh * ratio
+    if (dw > MAX_W) { dw = MAX_W; dh = dw / ratio }
+    doc.addImage(clientLogo.dataUrl, 'PNG', logoBoxX, y + 3, dw, dh)
   }
 
   // ── Left column: project name + address ──────────────────────────────────
@@ -226,8 +228,8 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
     doc.text(addr, ML, nameBottom + 3)
   }
 
-  // Advance y past whichever column is taller (right col: label 4 + logo 35 + gap 6 = 45)
-  y = Math.max(nameBottom + (addr ? 10 : 4), y + 45)
+  // Advance y past whichever column is taller (right col: label 3 + max logo 42 + gap 6 = 51)
+  y = Math.max(nameBottom + (addr ? 10 : 4), y + 51)
 
   y += 4
 
