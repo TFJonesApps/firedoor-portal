@@ -194,22 +194,23 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
   const LOGO_BOX_H = 22
   const logoBoxX   = W - MR - LOGO_BOX_W
 
+  // Right column starts at same level as project name (y + 10)
+  const ry = y + 10
+
   doc.setFontSize(7)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...SLATE)
-  doc.text('PREPARED FOR', logoBoxX, y)
+  doc.text('PREPARED FOR', logoBoxX, ry)
 
   if (clientLogo) {
-    const ratio     = clientLogo.width / clientLogo.height
-    const MAX_W     = 55
-    // Square/portrait logos (badges) get more height; wide logos get less
-    const targetH   = ratio < 1.5 ? 52 : 22
+    const ratio   = clientLogo.width / clientLogo.height
+    const MAX_W   = 55
+    const targetH = ratio < 1.5 ? 52 : 22
     let dh = targetH
     let dw = dh * ratio
     if (dw > MAX_W) { dw = MAX_W; dh = dw / ratio }
-    // Square logos: place with no gap (whitespace in PNG acts as natural padding)
-    const yOffset = ratio < 1.5 ? 0 : 3
-    doc.addImage(clientLogo.dataUrl, 'PNG', logoBoxX, y + yOffset, dw, dh)
+    const yOffset = ratio < 1.5 ? 3 : 5
+    doc.addImage(clientLogo.dataUrl, 'PNG', logoBoxX, ry + yOffset, dw, dh)
   }
 
   // ── Left column: project name + address ──────────────────────────────────
