@@ -201,11 +201,13 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
     const ratio     = clientLogo.width / clientLogo.height
     const MAX_W     = 55
     // Square/portrait logos (badges) get more height; wide logos get less
-    const targetH   = ratio < 1.5 ? 42 : 22
+    const targetH   = ratio < 1.5 ? 52 : 22
     let dh = targetH
     let dw = dh * ratio
     if (dw > MAX_W) { dw = MAX_W; dh = dw / ratio }
-    doc.addImage(clientLogo.dataUrl, 'PNG', logoBoxX, y + 3, dw, dh)
+    // Square logos: place with no gap (whitespace in PNG acts as natural padding)
+    const yOffset = ratio < 1.5 ? 0 : 3
+    doc.addImage(clientLogo.dataUrl, 'PNG', logoBoxX, y + yOffset, dw, dh)
   }
 
   // ── Left column: project name + address ──────────────────────────────────
@@ -228,8 +230,8 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
     doc.text(addr, ML, nameBottom + 3)
   }
 
-  // Advance y past whichever column is taller (right col: label 3 + max logo 42 + gap 6 = 51)
-  y = Math.max(nameBottom + (addr ? 10 : 4), y + 51)
+  // Advance y past whichever column is taller (right col: label + max logo 52 + gap 5 = 57)
+  y = Math.max(nameBottom + (addr ? 10 : 4), y + 57)
 
   y += 4
 
