@@ -79,24 +79,20 @@ function drawPageHeader(doc, logo, rightTitle, rightSub) {
     doc.text(rightSub, W - MR, 19, { align: 'right' })
   }
 
-  // Navy rule + yellow accent
+  // Thin navy rule
   doc.setFillColor(...NAVY)
-  doc.rect(0, 24, W, 3, 'F')
-  doc.setFillColor(...YELLOW)
-  doc.rect(0, 24, W, 1, 'F')
+  doc.rect(0, 24, W, 1.5, 'F')
 }
 
 // ─── Footer ───────────────────────────────────────────────────────────────────
 function drawFooter(doc, pageNum, totalPages) {
   doc.setFillColor(...NAVY)
   doc.rect(0, H - 12, W, 12, 'F')
-  doc.setFillColor(...YELLOW)
-  doc.rect(0, H - 13, W, 1, 'F')
 
   doc.setFontSize(7)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(130, 155, 175)
-  doc.text('TF Jones  ·  Fire Door Inspection Services  ·  Confidential', ML, H - 4.5)
+  doc.text('TF Jones  ·  Fire Door Inspection  ·  Confidential', ML, H - 4.5)
 
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...WHITE)
@@ -204,10 +200,7 @@ async function coverPage(doc, logo, project, inspections) {
   doc.text(nameLines, ML, y)
   y += nameLines.length * 9
 
-  // Yellow underbar
-  doc.setFillColor(...YELLOW)
-  doc.rect(ML, y, 50, 1.5, 'F')
-  y += 7
+  y += 3
 
   // Address
   const addr = [project.address, project.postcode].filter(Boolean).join('  ·  ')
@@ -224,31 +217,31 @@ async function coverPage(doc, logo, project, inspections) {
   // ── Stat strip ──────────────────────────────────────────────────────────────
   const statW = (CW - 9) / 4
   const stats = [
-    { label: 'Total Doors', value: total,         color: NAVY  },
-    { label: 'Passed',      value: passed,        color: GREEN },
-    { label: 'Failed',      value: failed,        color: RED   },
-    { label: 'Pass Rate',   value: `${passRate}%`, color: NAVY },
+    { label: 'Total Doors', value: total,          color: NAVY  },
+    { label: 'Passed',      value: passed,         color: GREEN },
+    { label: 'Failed',      value: failed,         color: RED   },
+    { label: 'Pass Rate',   value: `${passRate}%`, color: NAVY  },
   ]
   stats.forEach((s, i) => {
     const bx = ML + i * (statW + 3)
     doc.setFillColor(...LGREY)
-    doc.roundedRect(bx, y, statW, 22, 1.5, 1.5, 'F')
+    doc.roundedRect(bx, y, statW, 17, 1.5, 1.5, 'F')
     // Top colour bar
     doc.setFillColor(...s.color)
-    doc.roundedRect(bx, y, statW, 3, 1.5, 1.5, 'F')
-    doc.rect(bx, y + 1.5, statW, 1.5, 'F')
+    doc.roundedRect(bx, y, statW, 2.5, 1.5, 1.5, 'F')
+    doc.rect(bx, y + 1.2, statW, 1.3, 'F')
     // Value
-    doc.setFontSize(16)
+    doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...s.color)
-    doc.text(String(s.value), bx + statW / 2, y + 14, { align: 'center' })
+    doc.text(String(s.value), bx + statW / 2, y + 10.5, { align: 'center' })
     // Label
-    doc.setFontSize(6.5)
+    doc.setFontSize(6)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(...SLATE)
-    doc.text(s.label.toUpperCase(), bx + statW / 2, y + 19.5, { align: 'center' })
+    doc.text(s.label.toUpperCase(), bx + statW / 2, y + 14.5, { align: 'center' })
   })
-  y += 27
+  y += 22
 
   // ── Project info card ────────────────────────────────────────────────────────
   doc.setFontSize(9)
@@ -356,7 +349,7 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
   drawPageHeader(doc, logo, project.name, project.client_name || '')
 
   // ── Door heading card ────────────────────────────────────────────────────────
-  const headY = 32
+  const headY = 30
   const headH = 20
 
   doc.setFillColor(...LGREY)
