@@ -219,22 +219,22 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
   const nameLines = doc.splitTextToSize(project.name || 'Untitled Project', leftW)
   doc.text(nameLines, ML, y + 10)
 
-  let nameBottom = y + 10 + nameLines.length * 9 + 2
+  let nameBottom = y + 10 + nameLines.length * 9
 
-  // Address and postcode on separate lines, larger text
+  // Address and postcode — tight stacking, larger text
   if (project.address) {
     doc.setFontSize(11)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(...SLATE)
-    doc.text(project.address, ML, nameBottom + 4)
-    nameBottom += 9
+    doc.text(project.address, ML, nameBottom + 3)
+    nameBottom += 6
   }
   if (project.postcode) {
     doc.setFontSize(11)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...DARK)
-    doc.text(project.postcode, ML, nameBottom + 4)
-    nameBottom += 9
+    doc.text(project.postcode, ML, nameBottom + 3)
+    nameBottom += 6
   }
 
   // Advance y past whichever column is taller
