@@ -53,21 +53,23 @@ export async function generateProjectReport(project, inspections) {
 // ─── Page header (shared) ─────────────────────────────────────────────────────
 // Logo sits on WHITE, so the black-background PNG renders cleanly.
 // A thin navy rule + yellow stripe sits below to anchor the header visually.
-function drawPageHeader(doc, logo, rightTitle, rightSub) {
+function drawPageHeader(doc, logo, rightTitle, rightSub, showLogo = true) {
   // White header zone
   doc.setFillColor(...WHITE)
   doc.rect(0, 0, W, 24, 'F')
 
-  // TFJ wordmark — fixed height 16mm, width calculated from aspect ratio
-  if (logo) {
-    const h = 16
-    const w = (logo.width / logo.height) * h
-    doc.addImage(logo.dataUrl, 'PNG', ML, 4, w, h)
-  } else {
-    doc.setFontSize(13)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...NAVY)
-    doc.text('TF JONES', ML, 14)
+  // TFJ wordmark — only on cover page
+  if (showLogo) {
+    if (logo) {
+      const h = 16
+      const w = (logo.width / logo.height) * h
+      doc.addImage(logo.dataUrl, 'PNG', ML, 4, w, h)
+    } else {
+      doc.setFontSize(13)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...NAVY)
+      doc.text('TF JONES', ML, 14)
+    }
   }
 
   // Right side text
@@ -374,7 +376,7 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
   doc.setFillColor(...WHITE)
   doc.rect(0, 0, W, H, 'F')
 
-  drawPageHeader(doc, logo, project.name, project.client_name || '')
+  drawPageHeader(doc, logo, project.name, project.client_name || '', false)
 
   // ── Door heading card ────────────────────────────────────────────────────────
   const headY = 30
