@@ -197,19 +197,13 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
   doc.setTextColor(...SLATE)
   doc.text('PREPARED FOR', logoBoxX, y)
 
-  doc.setFontSize(9)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(...DARK)
-  const clientLabel = project.client_name || '—'
-  doc.text(clientLabel, logoBoxX, y + 5)
-
   if (clientLogo) {
-    // Fixed 40×28mm box for all logos — scale to fit, preserve aspect ratio
-    const BOX_W = 40, BOX_H = 28
+    // 55×35mm box — logo starts right under the label, no client name text
+    const BOX_W = 55, BOX_H = 35
     const ratio = clientLogo.width / clientLogo.height
     let dw = BOX_W, dh = BOX_W / ratio
     if (dh > BOX_H) { dh = BOX_H; dw = dh * ratio }
-    doc.addImage(clientLogo.dataUrl, 'PNG', logoBoxX, y + 9, dw, dh)
+    doc.addImage(clientLogo.dataUrl, 'PNG', logoBoxX, y + 4, dw, dh)
   }
 
   // ── Left column: project name + address ──────────────────────────────────
@@ -232,8 +226,8 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
     doc.text(addr, ML, nameBottom + 3)
   }
 
-  // Advance y past whichever column is taller (right col: label 5 + name 5 + logo 28 + gap 6 = 44)
-  y = Math.max(nameBottom + (addr ? 10 : 4), y + 44)
+  // Advance y past whichever column is taller (right col: label 4 + logo 35 + gap 6 = 45)
+  y = Math.max(nameBottom + (addr ? 10 : 4), y + 45)
 
   y += 4
 
