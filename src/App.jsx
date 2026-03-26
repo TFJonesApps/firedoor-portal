@@ -10,12 +10,13 @@ import DoorResultPage from './pages/DoorResultPage'
 
 export default function App() {
   const [session, setSession] = useState(undefined) // undefined = loading
-  const [role, setRole]       = useState(null)
+  const [role, setRole]       = useState(undefined) // undefined = loading
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session)
       if (data.session) await fetchRole(data.session.user.id)
+      else setRole(null)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, s) => {
       setSession(s)
@@ -34,7 +35,8 @@ export default function App() {
     setRole(data?.role || 'client')
   }
 
-  if (session === undefined) {
+  // Wait for both session AND role to resolve before rendering routes
+  if (session === undefined || (session && role === undefined)) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0D1F35' }}>
         <Spinner />
