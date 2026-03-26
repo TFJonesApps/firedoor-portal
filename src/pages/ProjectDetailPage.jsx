@@ -22,6 +22,7 @@ export default function ProjectDetailPage() {
   const [saving, setSaving]           = useState(false)
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [clients, setClients]         = useState([])
+  const [publishing, setPublishing]   = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -131,7 +132,7 @@ export default function ProjectDetailPage() {
             </div>
           )}
           {!editing && (
-            <div style={{ display: 'flex', gap: 8, alignSelf: 'center' }}>
+            <div style={{ display: 'flex', gap: 8, alignSelf: 'center', flexWrap: 'wrap' }}>
               <button style={styles.editBtn} onClick={startEdit}>Edit Project</button>
               <button
                 style={{ ...styles.editBtn, background: '#EEFF00', opacity: generatingPdf ? 0.6 : 1 }}
@@ -143,6 +144,30 @@ export default function ProjectDetailPage() {
                 }}
               >
                 {generatingPdf ? 'Generating…' : '⬇ Download PDF'}
+              </button>
+              <button
+                style={{
+                  ...styles.editBtn,
+                  background: project?.is_published ? '#1A3A2A' : '#1A2A3A',
+                  border: `1px solid ${project?.is_published ? '#4CAF50' : '#8A9BAD'}`,
+                  color: project?.is_published ? '#4CAF50' : '#8A9BAD',
+                  opacity: publishing ? 0.6 : 1,
+                }}
+                disabled={publishing || inspections.length === 0}
+                onClick={async () => {
+                  setPublishing(true)
+                  const newVal = !project.is_published
+                  const { data, error } = await supabase
+                    .from('projects')
+                    .update({ is_published: newVal })
+                    .eq('id', project.id)
+                    .select()
+                    .single()
+                  if (!error) setProject(data)
+                  setPublishing(false)
+                }}
+              >
+                {publishing ? 'Updating…' : project?.is_published ? '✓ Released to Clients' : '⬆ Release to Clients'}
               </button>
             </div>
           )}
