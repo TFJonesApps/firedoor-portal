@@ -21,9 +21,11 @@ export default function ProjectDetailPage() {
   const [editForm, setEditForm]       = useState({})
   const [saving, setSaving]           = useState(false)
   const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [clients, setClients]         = useState([])
 
   useEffect(() => {
     fetchData()
+    supabase.from('clients').select('*').order('name').then(({ data }) => setClients(data || []))
   }, [id])
 
   async function fetchData() {
@@ -92,8 +94,6 @@ export default function ProjectDetailPage() {
                 ['Project Name', 'name'],
                 ['Address',      'address'],
                 ['Postcode',     'postcode'],
-                ['Client',       'client_name'],
-                ['Client Logo (filename e.g. Wigan_Council.png)', 'client_logo'],
               ].map(([label, key]) => (
                 <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <label style={styles.editLabel}>{label}</label>
@@ -104,6 +104,26 @@ export default function ProjectDetailPage() {
                   />
                 </div>
               ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <label style={styles.editLabel}>Client</label>
+                <select
+                  style={{ ...styles.editInput, cursor: 'pointer' }}
+                  value={editForm.client_name}
+                  onChange={e => {
+                    const selected = clients.find(c => c.name === e.target.value)
+                    setEditForm(f => ({
+                      ...f,
+                      client_name: e.target.value,
+                      client_logo: selected?.logo_filename || '',
+                    }))
+                  }}
+                >
+                  <option value="">— Select client —</option>
+                  {clients.map(c => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                 <button style={styles.saveBtn} onClick={saveEdit} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
                 <button style={styles.cancelBtn} onClick={() => setEditing(false)}>Cancel</button>
