@@ -563,7 +563,7 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
     doc.setFontSize(6.5)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...NAVY)
-    doc.text('SITE PHOTOGRAPHS', ML + 5.5, barY + 4.8)
+    doc.text('INSPECTION PHOTOGRAPHS', ML + 5.5, barY + 4.8)
 
     for (let i = 0; i < count; i++) {
       const [label, url] = photos[i]
