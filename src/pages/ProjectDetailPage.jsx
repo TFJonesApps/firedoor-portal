@@ -43,10 +43,11 @@ export default function ProjectDetailPage() {
 
   function startEdit() {
     setEditForm({
-      name:        project.name        || '',
-      address:     project.address     || '',
-      postcode:    project.postcode    || '',
-      client_name: project.client_name || '',
+      name:         project.name         || '',
+      address:      project.address      || '',
+      postcode:     project.postcode     || '',
+      client_name:  project.client_name  || '',
+      client_logo:  project.client_logo  || '',
     })
     setEditing(true)
   }
@@ -92,6 +93,7 @@ export default function ProjectDetailPage() {
                 ['Address',      'address'],
                 ['Postcode',     'postcode'],
                 ['Client',       'client_name'],
+                ['Client Logo (filename e.g. Wigan_Council.png)', 'client_logo'],
               ].map(([label, key]) => (
                 <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <label style={styles.editLabel}>{label}</label>

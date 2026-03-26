@@ -22,13 +22,16 @@ const CW = W - ML - MR   // 178mm
 // ─── Entry point ──────────────────────────────────────────────────────────────
 export async function generateProjectReport(project, inspections) {
   const doc  = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-  const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null)
+  const logo       = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null)
+  const clientLogo = project.client_logo
+    ? await loadLogoImage(`/${project.client_logo}`).catch(() => null)
+    : null
 
   let pageNum = 1
   const totalPages = () => pageNum  // resolved later — we'll do a two-pass count
 
   // Cover + overflowed summary pages
-  const summaryPages = await coverPage(doc, logo, project, inspections, pageNum)
+  const summaryPages = await coverPage(doc, logo, clientLogo, project, inspections, pageNum)
   pageNum += summaryPages
 
   // Inspection detail pages
@@ -78,6 +81,8 @@ function drawPageHeader(doc, logo, rightTitle, rightSub) {
     doc.setTextColor(...DARK)
     doc.text(rightSub, W - MR, 19, { align: 'right' })
   }
+  // Return header bottom Y
+  return 25.5
 
   // Thin navy rule
   doc.setFillColor(...NAVY)
@@ -147,7 +152,7 @@ function drawSummaryRow(doc, ins, y, rowIndex) {
 
 // ─── Cover page ───────────────────────────────────────────────────────────────
 // Returns number of pages used (1 + overflow pages)
-async function coverPage(doc, logo, project, inspections) {
+async function coverPage(doc, logo, clientLogo, project, inspections) {
   const passed   = inspections.filter(i => i.inspection_passed === 'Pass').length
   const failed   = inspections.filter(i => i.inspection_passed === 'Fail').length
   const total    = inspections.length
@@ -176,6 +181,11 @@ async function coverPage(doc, logo, project, inspections) {
   doc.rect(0, 0, W, H, 'F')
 
   drawPageHeader(doc, logo, 'FIRE DOOR INSPECTION REPORT', dateStr)
+
+  // Client logo — right-aligned in the white header zone, max 40mm wide, 16mm tall
+  if (clientLogo) {
+    doc.addImage(clientLogo, 'PNG', W - MR - 40, 4, 40, 16)
+  }
 
   let y = 34
 
