@@ -204,10 +204,11 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
   doc.text(clientLabel, logoBoxX, y + 5)
 
   if (clientLogo) {
-    // Width = exact width of the client name text; height = same (square presentation)
-    const nameW = doc.getTextWidth(clientLabel)
-    const dw    = nameW
-    const dh    = dw   // square
+    // Fixed 40×20mm box for all logos — scale to fit, preserve aspect ratio
+    const BOX_W = 40, BOX_H = 20
+    const ratio = clientLogo.width / clientLogo.height
+    let dw = BOX_W, dh = BOX_W / ratio
+    if (dh > BOX_H) { dh = BOX_H; dw = dh * ratio }
     doc.addImage(clientLogo.dataUrl, 'PNG', logoBoxX, y + 9, dw, dh)
   }
 
@@ -231,9 +232,8 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
     doc.text(addr, ML, nameBottom + 3)
   }
 
-  // Advance y past whichever column is taller
-  const logoBlockH = clientLogo ? (() => { const nw = 9; return 9 + nw + 6 })() : 0
-  y = Math.max(nameBottom + (addr ? 10 : 4), y + 9 + (clientLogo ? doc.getTextWidth(project.client_name || '—') : 0) + 6)
+  // Advance y past whichever column is taller (right col: label 5 + name 5 + logo 20 + gap 6 = 36)
+  y = Math.max(nameBottom + (addr ? 10 : 4), y + 36)
 
   y += 4
 
