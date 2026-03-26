@@ -41,10 +41,13 @@ export default function ProjectsPage() {
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerInner}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <img src="/tfj_logo.png" alt="TF Jones" style={{ height: 36, objectFit: 'contain' }} />
-            <div style={{ width: 1, height: 32, background: '#EEFF00', opacity: 0.4 }} />
-            <p style={{ color: '#8A9BAD', fontSize: 13, margin: 0 }}>Fire Door Inspection Portal</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+            <img src="/tfj_logo.png" alt="TF Jones" style={{ height: 42, objectFit: 'contain' }} />
+            <div style={{ width: 1, height: 36, background: '#fff', opacity: 0.15 }} />
+            <div>
+              <p style={{ color: '#fff', fontSize: 16, fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>Fire Door Inspection Portal</p>
+              <p style={{ color: '#8A9BAD', fontSize: 12, margin: 0, marginTop: 2 }}>TF Jones</p>
+            </div>
           </div>
           <div style={styles.headerRight}>
             <span style={styles.userEmail}>{user?.email}</span>
@@ -125,8 +128,8 @@ export default function ProjectsPage() {
 function StatChip({ label, value, color }) {
   return (
     <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: 28, fontWeight: 700, color }}>{value}</div>
-      <div style={{ fontSize: 12, color: '#8A9BAD' }}>{label}</div>
+      <div style={{ fontSize: 32, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 12, color: '#8A9BAD', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
     </div>
   )
 }
@@ -137,17 +140,17 @@ function Spinner() {
 
 const styles = {
   page: { minHeight: '100vh', background: '#0D1F35' },
-  header: { background: '#1A3A5C', padding: '0 24px', borderBottom: '1px solid #162840' },
-  headerInner: { maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0' },
+  header: { background: '#0D1F35', padding: '0 32px', borderBottom: '3px solid #EEFF00' },
+  headerInner: { maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 0' },
   title: { fontSize: 20, fontWeight: 700, color: '#fff', margin: 0 },
   subtitle: { fontSize: 12, color: '#8A9BAD', marginTop: 2 },
-  headerRight: { display: 'flex', alignItems: 'center', gap: 16 },
-  userEmail: { color: '#8A9BAD', fontSize: 13 },
-  signOutBtn: { background: 'transparent', border: '1px solid #8A9BAD', borderRadius: 6, padding: '6px 14px', color: '#8A9BAD', fontSize: 13 },
+  headerRight: { display: 'flex', alignItems: 'center', gap: 20 },
+  userEmail: { color: '#fff', fontSize: 14, fontWeight: 500 },
+  signOutBtn: { background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, padding: '8px 18px', color: '#fff', fontSize: 13, fontWeight: 500 },
   content: { maxWidth: 1200, margin: '0 auto', padding: '24px 24px' },
   controls: { display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 },
   statsRow: { display: 'flex', gap: 32 },
-  search: { background: '#162840', border: '1px solid #1A3A5C', borderRadius: 8, padding: '11px 16px', color: '#fff', fontSize: 15, width: '100%', maxWidth: 480, outline: 'none' },
+  search: { background: '#162840', border: '1px solid #243F5C', borderRadius: 8, padding: '12px 16px', color: '#fff', fontSize: 15, width: '100%', maxWidth: 520, outline: 'none' },
   tableWrap: { overflowX: 'auto', borderRadius: 12, border: '1px solid #162840' },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { background: '#162840', padding: '12px 16px', textAlign: 'left', fontSize: 12, color: '#8A9BAD', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #1A3A5C' },
