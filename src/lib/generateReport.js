@@ -186,50 +186,54 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
 
   let y = 34
 
-  // ── Client logo block — right side, next to "PREPARED FOR" ────────────────
-  // Fixed height 18mm, width scaled by aspect ratio, capped at 60mm
-  if (clientLogo) {
-    const maxH = 18
-    const maxW = 60
-    const aspectW = (clientLogo.width / clientLogo.height) * maxH
-    const displayW = Math.min(aspectW, maxW)
-    const displayH = (displayW / aspectW) * maxH
-    const lx = W - MR - displayW
-    doc.addImage(clientLogo.dataUrl, 'PNG', lx, y, displayW, displayH)
-  }
+  // ── Right column: PREPARED FOR + client logo ─────────────────────────────
+  // All logos fit into a fixed 55×22mm box (scaled to fit, centred in box)
+  const LOGO_BOX_W = 55
+  const LOGO_BOX_H = 22
+  const logoBoxX   = W - MR - LOGO_BOX_W
 
-  // "Prepared for"
-  doc.setFontSize(7.5)
+  doc.setFontSize(7)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...SLATE)
-  doc.text('PREPARED FOR', ML, y)
-  y += 5
+  doc.text('PREPARED FOR', logoBoxX, y)
 
   doc.setFontSize(9)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...DARK)
-  doc.text(project.client_name || '—', ML, y)
-  y += 9
+  doc.text(project.client_name || '—', logoBoxX, y + 5)
 
-  // Project name
+  if (clientLogo) {
+    // Scale to fit inside LOGO_BOX_W × LOGO_BOX_H, preserving aspect ratio
+    const ratio   = clientLogo.width / clientLogo.height
+    let dw = LOGO_BOX_W
+    let dh = dw / ratio
+    if (dh > LOGO_BOX_H) { dh = LOGO_BOX_H; dw = dh * ratio }
+    const lx = logoBoxX + (LOGO_BOX_W - dw) / 2
+    doc.addImage(clientLogo.dataUrl, 'PNG', lx, y + 9, dw, dh)
+  }
+
+  // ── Left column: project name + address ──────────────────────────────────
+  const leftW = logoBoxX - ML - 8   // stop well before the right column
+
   doc.setFontSize(22)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...NAVY)
-  const nameLines = doc.splitTextToSize(project.name || 'Untitled Project', CW)
-  doc.text(nameLines, ML, y)
-  y += nameLines.length * 9
+  const nameLines = doc.splitTextToSize(project.name || 'Untitled Project', leftW)
+  doc.text(nameLines, ML, y + 10)
 
-  y += 3
+  const nameBottom = y + 10 + nameLines.length * 9
 
-  // Address
-  const addr = [project.address, project.postcode].filter(Boolean).join('  ·  ')
+  // Address — tight under project name
+  const addr = [project.address, project.postcode].filter(Boolean).join('   ·   ')
   if (addr) {
-    doc.setFontSize(9)
+    doc.setFontSize(8.5)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(...SLATE)
-    doc.text(addr, ML, y)
-    y += 7
+    doc.text(addr, ML, nameBottom + 3)
   }
+
+  // Advance y past whichever column is taller
+  y = Math.max(nameBottom + (addr ? 10 : 4), y + 9 + LOGO_BOX_H + 6)
 
   y += 4
 
