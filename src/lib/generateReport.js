@@ -58,9 +58,11 @@ function drawPageHeader(doc, logo, rightTitle, rightSub) {
   doc.setFillColor(...WHITE)
   doc.rect(0, 0, W, 24, 'F')
 
-  // Full wordmark logo — wide landscape, navy on transparent, sits on white
+  // TFJ wordmark — fixed height 16mm, width calculated from aspect ratio
   if (logo) {
-    doc.addImage(logo, 'PNG', ML, 4, 44, 16)
+    const h = 16
+    const w = (logo.width / logo.height) * h
+    doc.addImage(logo.dataUrl, 'PNG', ML, 4, w, h)
   } else {
     doc.setFontSize(13)
     doc.setFont('helvetica', 'bold')
@@ -182,12 +184,19 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
 
   drawPageHeader(doc, logo, 'FIRE DOOR INSPECTION REPORT', dateStr)
 
-  // Client logo — right-aligned in the white header zone, max 40mm wide, 16mm tall
-  if (clientLogo) {
-    doc.addImage(clientLogo, 'PNG', W - MR - 40, 4, 40, 16)
-  }
-
   let y = 34
+
+  // ── Client logo block — right side, next to "PREPARED FOR" ────────────────
+  // Fixed height 18mm, width scaled by aspect ratio, capped at 60mm
+  if (clientLogo) {
+    const maxH = 18
+    const maxW = 60
+    const aspectW = (clientLogo.width / clientLogo.height) * maxH
+    const displayW = Math.min(aspectW, maxW)
+    const displayH = (displayW / aspectW) * maxH
+    const lx = W - MR - displayW
+    doc.addImage(clientLogo.dataUrl, 'PNG', lx, y, displayW, displayH)
+  }
 
   // "Prepared for"
   doc.setFontSize(7.5)
@@ -594,6 +603,7 @@ async function loadImage(url) {
 }
 
 // For logos with transparency — PNG to preserve alpha channel
+// Returns { dataUrl, width, height } so caller can size by aspect ratio
 async function loadLogoImage(url) {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -603,7 +613,7 @@ async function loadLogoImage(url) {
       canvas.width  = img.width
       canvas.height = img.height
       canvas.getContext('2d').drawImage(img, 0, 0)
-      resolve(canvas.toDataURL('image/png'))
+      resolve({ dataUrl: canvas.toDataURL('image/png'), width: img.width, height: img.height })
     }
     img.onerror = reject
     img.src = url + (url.includes('?') ? '&' : '?') + `_=${Date.now()}`
