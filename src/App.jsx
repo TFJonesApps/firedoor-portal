@@ -11,27 +11,37 @@ import UsersPage from './pages/UsersPage'
 
 export default function App() {
   const [session, setSession] = useState(undefined) // undefined = loading
+  const [role, setRole]       = useState(undefined) // undefined = loading
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
-      if (data.session) upsertEmail(data.session.user)
+      if (data.session) initUser(data.session.user)
+      else { setSession(null); setRole(null) }
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s)
-      if (s) upsertEmail(s.user)
+      if (s) initUser(s.user)
+      else setRole(null)
     })
     return () => subscription.unsubscribe()
   }, [])
 
-  async function upsertEmail(user) {
+  async function initUser(user) {
+    // Upsert email then fetch role
     await supabase.from('user_profiles').upsert(
       { id: user.id, email: user.email },
       { onConflict: 'id', ignoreDuplicates: false }
     )
+    const { data } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    setRole(data?.role || 'client')
   }
 
-  if (session === undefined) {
+  if (session === undefined || (session && role === undefined)) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0D1F35' }}>
         <Spinner />
@@ -39,22 +49,24 @@ export default function App() {
     )
   }
 
+  const isAdmin = session && role === 'admin'
+
   return (
     <BrowserRouter>
       <Routes>
-        {/* Admin routes — /login is the TF Jones entry point */}
-        <Route path="/login"       element={!session ? <LoginPage />       : <Navigate to="/" />} />
-        <Route path="/"            element={session  ? <ProjectsPage />    : <Navigate to="/login" />} />
-        <Route path="/project/:id" element={session  ? <ProjectDetailPage /> : <Navigate to="/login" />} />
-        <Route path="/users"       element={session  ? <UsersPage />        : <Navigate to="/login" />} />
+        {/* Admin routes — only accessible by admins */}
+        <Route path="/login"       element={!session ? <LoginPage />         : <Navigate to={isAdmin ? '/' : '/client/scan'} />} />
+        <Route path="/"            element={isAdmin  ? <ProjectsPage />      : <Navigate to={session ? '/client/scan' : '/login'} />} />
+        <Route path="/project/:id" element={isAdmin  ? <ProjectDetailPage /> : <Navigate to={session ? '/client/scan' : '/login'} />} />
+        <Route path="/users"       element={isAdmin  ? <UsersPage />         : <Navigate to={session ? '/client/scan' : '/login'} />} />
 
-        {/* Client routes — /client/login is the client entry point */}
-        <Route path="/client/login"         element={!session ? <ClientLoginPage /> : <Navigate to="/client/scan" />} />
+        {/* Client routes */}
+        <Route path="/client/login"         element={!session ? <ClientLoginPage /> : <Navigate to={isAdmin ? '/' : '/client/scan'} />} />
         <Route path="/client/scan"          element={session  ? <ClientScanPage />  : <Navigate to="/client/login" />} />
         <Route path="/client/door/:assetId" element={session  ? <DoorResultPage />  : <Navigate to="/client/login" />} />
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to={session ? '/' : '/login'} />} />
+        <Route path="*" element={<Navigate to={session ? (isAdmin ? '/' : '/client/scan') : '/login'} />} />
       </Routes>
     </BrowserRouter>
   )
