@@ -1,6 +1,28 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors,
+} from '@dnd-kit/core'
+import {
+  arrayMove, SortableContext, useSortable, rectSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+
+const DEFAULT_PANEL_ORDER = ['projects', 'activity', 'recent', 'remedials', 'reinspection', 'workload']
+
+function loadPanelOrder() {
+  try {
+    const saved = localStorage.getItem('dashboardPanelOrder')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      // ensure all panels present (in case new ones added)
+      const missing = DEFAULT_PANEL_ORDER.filter(p => !parsed.includes(p))
+      return [...parsed, ...missing]
+    }
+  } catch {}
+  return DEFAULT_PANEL_ORDER
+}
 
 const FLAT_DAYS     = 365
 const COMMUNAL_DAYS = 90
@@ -39,7 +61,19 @@ export default function ProjectsPage() {
   const [search,           setSearch]           = useState('')
   const [loading,          setLoading]          = useState(true)
   const [user,             setUser]             = useState(null)
+  const [panelOrder,       setPanelOrder]       = useState(loadPanelOrder)
   const navigate = useNavigate()
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+
+  function handleDragEnd({ active, over }) {
+    if (!over || active.id === over.id) return
+    setPanelOrder(prev => {
+      const next = arrayMove(prev, prev.indexOf(active.id), prev.indexOf(over.id))
+      localStorage.setItem('dashboardPanelOrder', JSON.stringify(next))
+      return next
+    })
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
@@ -216,134 +250,178 @@ export default function ProjectsPage() {
         </select>
       </div>
 
-      {/* ── 3-column body ── */}
-      <div style={s.body}>
+      {/* ── Draggable panel grid ── */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={panelOrder} strategy={rectSortingStrategy}>
+          <div style={s.body}>
+            {panelOrder.map(id => (
+              <SortablePanel key={id} id={id}>
+                {id === 'projects' && (
+                  <>
+                    <SectionTitle>Projects</SectionTitle>
+                    {loading ? <Spinner /> : filteredProjects.length === 0 ? (
+                      <p style={{ color: '#8A9BAD', textAlign: 'center', padding: 40 }}>No projects found.</p>
+                    ) : (
+                      <div style={s.tableWrap}>
+                        <table style={s.table}>
+                          <thead><tr>{['Project','Address','Client','Inspector','Created'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+                          <tbody>
+                            {filteredProjects.map(p => (
+                              <tr key={p.id} style={s.row} onClick={() => navigate(`/project/${p.id}`, { state: { project: p } })}>
+                                <td style={s.td}><span style={s.projectName}>{p.name}</span></td>
+                                <td style={s.td}><span style={{ color: '#CBD5E1' }}>{[p.address, p.postcode].filter(Boolean).join(', ') || '—'}</span></td>
+                                <td style={s.td}><span style={{ color: '#EEFF00', fontWeight: 600 }}>{p.client_name || '—'}</span></td>
+                                <td style={s.td}><span style={{ color: '#fff', fontWeight: 500 }}>{p.engineer_name || '—'}</span></td>
+                                <td style={s.td}><span style={{ color: '#94A3B8' }}>{new Date(p.created_at).toLocaleDateString('en-GB')}</span></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                )}
 
-        {/* ── Col 1: Projects + Activity feed ── */}
-        <div style={s.col1}>
-          <SectionTitle>Projects</SectionTitle>
-          {loading ? <Spinner /> : filteredProjects.length === 0 ? (
-            <p style={{ color: '#8A9BAD', textAlign: 'center', padding: 40 }}>No projects found.</p>
-          ) : (
-            <div style={s.tableWrap}>
-              <table style={s.table}>
-                <thead>
-                  <tr>{['Project','Address','Client','Inspector','Created'].map(h => (
-                    <th key={h} style={s.th}>{h}</th>
-                  ))}</tr>
-                </thead>
-                <tbody>
-                  {filteredProjects.map(p => (
-                    <tr key={p.id} style={s.row}
-                      onClick={() => navigate(`/project/${p.id}`, { state: { project: p } })}>
-                      <td style={s.td}><span style={s.projectName}>{p.name}</span></td>
-                      <td style={s.td}><span style={{ color: '#CBD5E1' }}>{[p.address, p.postcode].filter(Boolean).join(', ') || '—'}</span></td>
-                      <td style={s.td}><span style={{ color: '#EEFF00', fontWeight: 600 }}>{p.client_name || '—'}</span></td>
-                      <td style={s.td}><span style={{ color: '#fff', fontWeight: 500 }}>{p.engineer_name || '—'}</span></td>
-                      <td style={s.td}><span style={{ color: '#94A3B8' }}>{new Date(p.created_at).toLocaleDateString('en-GB')}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <SectionTitle style={{ marginTop: 24 }}>Activity Feed</SectionTitle>
-          <div style={s.panel}>
-            {activityFeed.length === 0
-              ? <p style={{ color: '#8A9BAD', fontSize: 13 }}>No activity yet.</p>
-              : activityFeed.map((g, i) => (
-                <div key={i}
-                  style={{ ...s.feedRow, cursor: g.projectId ? 'pointer' : 'default' }}
-                  onClick={() => g.projectId && navigate(`/project/${g.projectId}`)}>
-                  <div style={s.activityDot} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, color: '#CBD5E1', lineHeight: 1.4 }}>
-                      <span style={{ color: '#EEFF00', fontWeight: 600 }}>{g.engineer || '—'}</span>
-                      {' '}inspected{' '}
-                      <span style={{ color: '#fff', fontWeight: 700 }}>{g.count} door{g.count !== 1 ? 's' : ''}</span>
-                      {' '}at <span style={{ color: '#fff' }}>{g.project || '—'}</span>
+                {id === 'activity' && (
+                  <>
+                    <SectionTitle>Activity Feed</SectionTitle>
+                    <div style={s.panel}>
+                      {activityFeed.length === 0
+                        ? <p style={{ color: '#8A9BAD', fontSize: 13 }}>No activity yet.</p>
+                        : activityFeed.map((g, i) => (
+                          <div key={i} style={{ ...s.feedRow, cursor: g.projectId ? 'pointer' : 'default' }}
+                            onClick={() => g.projectId && navigate(`/project/${g.projectId}`)}>
+                            <div style={s.activityDot} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, color: '#CBD5E1', lineHeight: 1.4 }}>
+                                <span style={{ color: '#EEFF00', fontWeight: 600 }}>{g.engineer || '—'}</span>{' '}inspected{' '}
+                                <span style={{ color: '#fff', fontWeight: 700 }}>{g.count} door{g.count !== 1 ? 's' : ''}</span>{' '}
+                                at <span style={{ color: '#fff' }}>{g.project || '—'}</span>
+                              </div>
+                              <div style={s.feedMeta}>{g.client || '—'} · {timeAgo(g.date)}</div>
+                            </div>
+                          </div>
+                        ))
+                      }
                     </div>
-                    <div style={s.feedMeta}>{g.client || '—'} · {timeAgo(g.date)}</div>
-                  </div>
-                </div>
-              ))
-            }
-          </div>
-        </div>
+                  </>
+                )}
 
-        {/* ── Col 2: Recent inspections + Remedials ── */}
-        <div style={s.col2}>
-          <SectionTitle>Recent Inspections</SectionTitle>
-          <div style={s.panel}>
-            {recentFeed.length === 0
-              ? <p style={{ color: '#8A9BAD', fontSize: 13 }}>No inspections yet.</p>
-              : recentFeed.map(ins => (
-                <div key={ins.id} style={s.feedRow}
-                  onClick={() => ins.project_id && navigate(`/project/${ins.project_id}`)}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={s.feedDoor}>{ins.door_location || ins.door_asset_id || '—'}</div>
-                    <div style={s.feedProject}>{ins.projects?.name || '—'} · {ins.projects?.client_name || '—'}</div>
-                    <div style={s.feedMeta}>{new Date(ins.created_at).toLocaleDateString('en-GB')} · {ins.engineer_name || '—'}</div>
-                  </div>
-                  <PassBadge passed={ins.inspection_passed === 'Pass'} />
-                </div>
-              ))
-            }
-          </div>
-
-          <SectionTitle style={{ marginTop: 24 }}>Remedial Works Outstanding</SectionTitle>
-          <div style={s.panel}>
-            {remedialsOutstanding.length === 0
-              ? <p style={{ color: '#4CAF50', fontSize: 13 }}>✓ No outstanding remedials.</p>
-              : remedialsOutstanding.map(ins => (
-                <div key={ins.id}
-                  style={{ ...s.feedRow, borderLeft: '3px solid #F44336', paddingLeft: 10, cursor: 'pointer' }}
-                  onClick={() => ins.project_id && navigate(`/project/${ins.project_id}`)}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={s.feedDoor}>{ins.door_location || ins.door_asset_id || '—'}</div>
-                    <div style={s.feedProject}>{ins.projects?.name || '—'} · {ins.projects?.client_name || '—'}</div>
-                    <div style={{ ...s.feedMeta, color: '#F44336' }}>
-                      {ins.remedial_works_completed || ins.recommended_action || 'Repair required'}
+                {id === 'recent' && (
+                  <>
+                    <SectionTitle>Recent Inspections</SectionTitle>
+                    <div style={s.panel}>
+                      {recentFeed.length === 0
+                        ? <p style={{ color: '#8A9BAD', fontSize: 13 }}>No inspections yet.</p>
+                        : recentFeed.map(ins => (
+                          <div key={ins.id} style={s.feedRow} onClick={() => ins.project_id && navigate(`/project/${ins.project_id}`)}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={s.feedDoor}>{ins.door_location || ins.door_asset_id || '—'}</div>
+                              <div style={s.feedProject}>{ins.projects?.name || '—'} · {ins.projects?.client_name || '—'}</div>
+                              <div style={s.feedMeta}>{new Date(ins.created_at).toLocaleDateString('en-GB')} · {ins.engineer_name || '—'}</div>
+                            </div>
+                            <PassBadge passed={ins.inspection_passed === 'Pass'} />
+                          </div>
+                        ))
+                      }
                     </div>
-                  </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#F44336', flexShrink: 0 }}>ACTION</span>
-                </div>
-              ))
-            }
-          </div>
-        </div>
+                  </>
+                )}
 
-        {/* ── Col 3: Reinspection due + Inspector workload ── */}
-        <div style={s.col3}>
-          <SectionTitle>Reinspection Due</SectionTitle>
-          <div style={s.panel}>
-            {allDueSorted.length === 0
-              ? <p style={{ color: '#4CAF50', fontSize: 13 }}>✓ No doors yet.</p>
-              : allDueSorted.slice(0, 25).map(ins => <DueRow key={ins.id} ins={ins} navigate={navigate} />)
-            }
-          </div>
-
-          <SectionTitle style={{ marginTop: 24 }}>Inspector Workload <span style={{ color: '#4A6580', fontSize: 11, fontWeight: 400 }}>this month</span></SectionTitle>
-          <div style={s.panel}>
-            {inspectorWorkload.length === 0
-              ? <p style={{ color: '#8A9BAD', fontSize: 13 }}>No inspections this month.</p>
-              : inspectorWorkload.map(([name, count]) => {
-                  const maxCount = inspectorWorkload[0][1]
-                  const barW     = Math.max(16, Math.round((count / maxCount) * 120))
-                  return (
-                    <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid #1A3A5C' }}>
-                      <span style={{ color: '#fff', fontSize: 13, fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-                      <div style={{ height: 6, borderRadius: 3, background: '#EEFF00', width: barW, flexShrink: 0 }} />
-                      <span style={{ color: '#EEFF00', fontSize: 13, fontWeight: 700, minWidth: 28, textAlign: 'right' }}>{count}</span>
+                {id === 'remedials' && (
+                  <>
+                    <SectionTitle>Remedial Works Outstanding</SectionTitle>
+                    <div style={s.panel}>
+                      {remedialsOutstanding.length === 0
+                        ? <p style={{ color: '#4CAF50', fontSize: 13 }}>✓ No outstanding remedials.</p>
+                        : remedialsOutstanding.map(ins => (
+                          <div key={ins.id} style={{ ...s.feedRow, borderLeft: '3px solid #F44336', paddingLeft: 10, cursor: 'pointer' }}
+                            onClick={() => ins.project_id && navigate(`/project/${ins.project_id}`)}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={s.feedDoor}>{ins.door_location || ins.door_asset_id || '—'}</div>
+                              <div style={s.feedProject}>{ins.projects?.name || '—'} · {ins.projects?.client_name || '—'}</div>
+                              <div style={{ ...s.feedMeta, color: '#F44336' }}>{ins.remedial_works_completed || ins.recommended_action || 'Repair required'}</div>
+                            </div>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#F44336', flexShrink: 0 }}>ACTION</span>
+                          </div>
+                        ))
+                      }
                     </div>
-                  )
-                })
-            }
-          </div>
-        </div>
+                  </>
+                )}
 
+                {id === 'reinspection' && (
+                  <>
+                    <SectionTitle>Reinspection Due</SectionTitle>
+                    <div style={s.panel}>
+                      {allDueSorted.length === 0
+                        ? <p style={{ color: '#4CAF50', fontSize: 13 }}>✓ No doors yet.</p>
+                        : allDueSorted.slice(0, 25).map(ins => <DueRow key={ins.id} ins={ins} navigate={navigate} />)
+                      }
+                    </div>
+                  </>
+                )}
+
+                {id === 'workload' && (
+                  <>
+                    <SectionTitle>Inspector Workload <span style={{ color: '#4A6580', fontSize: 11, fontWeight: 400 }}>this month</span></SectionTitle>
+                    <div style={s.panel}>
+                      {inspectorWorkload.length === 0
+                        ? <p style={{ color: '#8A9BAD', fontSize: 13 }}>No inspections this month.</p>
+                        : inspectorWorkload.map(([name, count]) => {
+                            const barW = Math.max(16, Math.round((count / inspectorWorkload[0][1]) * 120))
+                            return (
+                              <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid #1A3A5C' }}>
+                                <span style={{ color: '#fff', fontSize: 13, fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                                <div style={{ height: 6, borderRadius: 3, background: '#EEFF00', width: barW, flexShrink: 0 }} />
+                                <span style={{ color: '#EEFF00', fontSize: 13, fontWeight: 700, minWidth: 28, textAlign: 'right' }}>{count}</span>
+                              </div>
+                            )
+                          })
+                      }
+                    </div>
+                  </>
+                )}
+              </SortablePanel>
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    </div>
+  )
+}
+
+function SortablePanel({ id, children }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+      }}
+    >
+      {/* Drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'grab', userSelect: 'none', marginBottom: 2 }}
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <circle cx="4" cy="3" r="1.2" fill="#4A6580"/>
+          <circle cx="10" cy="3" r="1.2" fill="#4A6580"/>
+          <circle cx="4" cy="7" r="1.2" fill="#4A6580"/>
+          <circle cx="10" cy="7" r="1.2" fill="#4A6580"/>
+          <circle cx="4" cy="11" r="1.2" fill="#4A6580"/>
+          <circle cx="10" cy="11" r="1.2" fill="#4A6580"/>
+        </svg>
+        <span style={{ color: '#4A6580', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>drag to reorder</span>
       </div>
+      {children}
     </div>
   )
 }
@@ -411,10 +489,7 @@ const s = {
   search:       { flex: 1, background: '#162840', border: '1px solid #243F5C', borderRadius: 8, padding: '10px 16px', color: '#fff', fontSize: 14, outline: 'none' },
   select:       { background: '#162840', border: '1px solid #243F5C', borderRadius: 8, padding: '10px 14px', color: '#fff', fontSize: 14, outline: 'none', minWidth: 160 },
 
-  body:         { maxWidth: 1600, margin: '0 auto', padding: '0 32px 40px', display: 'flex', gap: 20, alignItems: 'flex-start' },
-  col1:         { flex: 2, minWidth: 0, display: 'flex', flexDirection: 'column' },
-  col2:         { flex: 1.2, minWidth: 0, display: 'flex', flexDirection: 'column' },
-  col3:         { width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column' },
+  body:         { maxWidth: 1600, margin: '0 auto', padding: '0 32px 40px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, alignItems: 'flex-start' },
 
   tableWrap:    { overflowX: 'auto', borderRadius: 12, border: '1px solid #162840', marginBottom: 4 },
   table:        { width: '100%', borderCollapse: 'collapse' },
