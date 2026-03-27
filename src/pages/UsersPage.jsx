@@ -107,6 +107,7 @@ export default function UsersPage() {
                           onChange={e => setField(user.id, 'role', e.target.value)}
                         >
                           <option value="admin">Admin</option>
+                          <option value="inspector">Inspector</option>
                           <option value="client">Client</option>
                         </select>
                       </td>
@@ -115,7 +116,7 @@ export default function UsersPage() {
                           style={s.select}
                           value={edit.client_id || ''}
                           onChange={e => setField(user.id, 'client_id', e.target.value || null)}
-                          disabled={edit.role === 'admin'}
+                          disabled={edit.role === 'admin' || edit.role === 'inspector'}
                         >
                           <option value="">— None —</option>
                           {clients.map(c => (

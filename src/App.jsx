@@ -8,6 +8,7 @@ import ClientLoginPage from './pages/ClientLoginPage'
 import ClientScanPage from './pages/ClientScanPage'
 import DoorResultPage from './pages/DoorResultPage'
 import UsersPage from './pages/UsersPage'
+import InspectorPage from './pages/InspectorPage'
 
 export default function App() {
   const [session, setSession] = useState(undefined) // undefined = loading
@@ -49,24 +50,32 @@ export default function App() {
     )
   }
 
-  const isAdmin = session && role === 'admin'
+  const isAdmin     = session && role === 'admin'
+  const isInspector = session && role === 'inspector'
+  const isClient    = session && role === 'client'
+
+  // Where to send a logged-in user based on role
+  const roleHome = isAdmin ? '/' : isInspector ? '/inspector' : '/client/scan'
 
   return (
     <BrowserRouter>
       <Routes>
-        {/* Admin routes — only accessible by admins */}
-        <Route path="/login"       element={!session ? <LoginPage />         : <Navigate to={isAdmin ? '/' : '/client/scan'} />} />
-        <Route path="/"            element={isAdmin  ? <ProjectsPage />      : <Navigate to={session ? '/client/scan' : '/login'} />} />
-        <Route path="/project/:id" element={isAdmin  ? <ProjectDetailPage /> : <Navigate to={session ? '/client/scan' : '/login'} />} />
-        <Route path="/users"       element={isAdmin  ? <UsersPage />         : <Navigate to={session ? '/client/scan' : '/login'} />} />
+        {/* Admin routes — admins only */}
+        <Route path="/login"       element={!session ? <LoginPage />         : <Navigate to={roleHome} />} />
+        <Route path="/"            element={isAdmin  ? <ProjectsPage />      : <Navigate to={session ? roleHome : '/login'} />} />
+        <Route path="/project/:id" element={isAdmin  ? <ProjectDetailPage /> : <Navigate to={session ? roleHome : '/login'} />} />
+        <Route path="/users"       element={isAdmin  ? <UsersPage />         : <Navigate to={session ? roleHome : '/login'} />} />
+
+        {/* Inspector landing */}
+        <Route path="/inspector" element={isInspector ? <InspectorPage /> : <Navigate to={session ? roleHome : '/login'} />} />
 
         {/* Client routes */}
-        <Route path="/client/login"         element={!session ? <ClientLoginPage /> : <Navigate to={isAdmin ? '/' : '/client/scan'} />} />
-        <Route path="/client/scan"          element={session  ? <ClientScanPage />  : <Navigate to="/client/login" />} />
-        <Route path="/client/door/:assetId" element={session  ? <DoorResultPage />  : <Navigate to="/client/login" />} />
+        <Route path="/client/login"         element={!session ? <ClientLoginPage /> : <Navigate to={roleHome} />} />
+        <Route path="/client/scan"          element={isClient  ? <ClientScanPage />  : <Navigate to={session ? roleHome : '/client/login'} />} />
+        <Route path="/client/door/:assetId" element={isClient  ? <DoorResultPage />  : <Navigate to={session ? roleHome : '/client/login'} />} />
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to={session ? (isAdmin ? '/' : '/client/scan') : '/login'} />} />
+        <Route path="*" element={<Navigate to={session ? roleHome : '/login'} />} />
       </Routes>
     </BrowserRouter>
   )
