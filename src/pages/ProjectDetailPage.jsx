@@ -79,8 +79,11 @@ export default function ProjectDetailPage() {
 
       const alphas = clientData || {}
 
-      // Only rows with repair actions
-      const rows = inspections.filter(i => i.recommended_repair_actions?.trim())
+      // Only rows where repair is needed
+      const rows = inspections.filter(i =>
+        i.recommended_action?.toLowerCase().includes('repair') ||
+        i.recommended_repair_actions?.trim()
+      )
 
       if (rows.length === 0) {
         alert('No remedial works to export for this project.')
@@ -108,7 +111,7 @@ export default function ProjectDetailPage() {
         '', // Job Number — blank
         '', // Received Date — blank
         '', // Required Date — blank
-        ins.recommended_repair_actions || '',
+        ins.recommended_repair_actions?.trim() || ins.remedial_works_completed?.trim() || ins.recommended_action || '',
         '', '', '', '', '', '', '', '', '', '',
       ])
 
