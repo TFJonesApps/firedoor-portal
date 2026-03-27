@@ -105,7 +105,7 @@ export default function ProjectDetailPage() {
         alphas.csv_contractor_alpha || '',
         alphas.csv_depot_alpha     || '',
         alphas.csv_priority_alpha  || '',
-        project.address            || '',
+        '', // Property Ref — to be entered manually
         project.address            || '',
         project.postcode           || '',
         '', // Job Number — blank
