@@ -127,7 +127,7 @@ const s = {
   page:       { minHeight: '100vh', background: '#0D1F35', display: 'flex', flexDirection: 'column' },
   header:     { background: '#162840', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1A3A5C' },
   logo:       { height: 32, objectFit: 'contain' },
-  signOut:    { background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, padding: '6px 14px', color: '#fff', fontSize: 13 },
+  signOut:    { background: 'transparent', border: '1px solid #fff', borderRadius: 8, padding: '6px 14px', color: '#fff', fontSize: 13 },
   body:       { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 20px', gap: 20 },
   title:      { color: '#fff', fontSize: 24, fontWeight: 700, margin: 0, textAlign: 'center' },
   sub:        { color: '#8A9BAD', fontSize: 14, textAlign: 'center', margin: 0, maxWidth: 300 },
