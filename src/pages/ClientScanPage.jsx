@@ -104,7 +104,7 @@ export default function ClientScanPage() {
             📷  Start Scanning
           </button>
         ) : (
-          <button style={{ ...s.scanBtn, background: '#1A3A5C' }} onClick={stopScan}>
+          <button style={{ ...s.scanBtn, background: 'transparent', border: '2px solid #fff', color: '#fff' }} onClick={stopScan}>
             ✕  Cancel
           </button>
         )}
