@@ -76,6 +76,7 @@ export default function ProjectsPage() {
   const [layout,        setLayout]        = useState(loadLayout)
   const [gridWidth,     setGridWidth]     = useState(window.innerWidth - 64)
   const [showCalendar,  setShowCalendar]  = useState(false)
+  const [showExport,    setShowExport]    = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -226,6 +227,7 @@ export default function ProjectsPage() {
           <div style={s.headerRight}>
             <span style={s.userEmail}>{user?.email}</span>
             <button style={s.btn} onClick={() => navigate('/users')}>Users</button>
+            <button style={s.btn} onClick={() => setShowExport(true)}>⬇ Export</button>
             <button style={s.btn} onClick={() => { localStorage.removeItem(LAYOUT_KEY); setLayout(DEFAULT_LAYOUT) }}>Reset Layout</button>
             <button style={s.btn} onClick={() => supabase.auth.signOut()}>Sign Out</button>
           </div>
@@ -440,6 +442,9 @@ export default function ProjectsPage() {
       {showCalendar && (
         <CalendarModal doors={allDueSorted} onClose={() => setShowCalendar(false)} navigate={navigate} />
       )}
+      {showExport && (
+        <ExportModal onClose={() => setShowExport(false)} />
+      )}
     </div>
   )
 }
@@ -484,6 +489,162 @@ function StatChip({ label, value, color }) {
     <div style={{ textAlign: 'center', flex: 1 }}>
       <div style={{ fontSize: 28, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
       <div style={{ fontSize: 11, color: '#8A9BAD', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+    </div>
+  )
+}
+
+function downloadCsv(filename, headers, rows) {
+  const csv  = [headers, ...rows].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url  = URL.createObjectURL(blob)
+  Object.assign(document.createElement('a'), { href: url, download: filename }).click()
+  URL.revokeObjectURL(url)
+}
+
+function ExportModal({ onClose }) {
+  const [busy, setBusy] = useState(null)
+
+  const exports = [
+    {
+      id: 'projects',
+      title: 'All Projects',
+      desc: 'Project name, address, client, inspector, created date',
+      icon: '🏢',
+      run: async () => {
+        const { data } = await supabase.from('projects').select('name, address, postcode, client_name, engineer_name, created_at, notes').order('created_at', { ascending: false })
+        downloadCsv('projects.csv',
+          ['Project Name','Address','Postcode','Client','Inspector','Created','Notes'],
+          (data || []).map(p => [p.name, p.address, p.postcode, p.client_name, p.engineer_name, new Date(p.created_at).toLocaleDateString('en-GB'), p.notes])
+        )
+      },
+    },
+    {
+      id: 'inspections',
+      title: 'All Inspections',
+      desc: 'Every door inspection — location, result, inspector, date, recommended action',
+      icon: '🚪',
+      run: async () => {
+        const { data } = await supabase
+          .from('inspections')
+          .select('door_location, door_asset_id, doorset_assembly_type, fire_rating, inspection_passed, engineer_name, created_at, recommended_action, remedial_works_completed, projects(name, client_name)')
+          .order('created_at', { ascending: false })
+        downloadCsv('inspections.csv',
+          ['Door Location','Door ID','Assembly Type','Fire Rating','Result','Inspector','Date','Project','Client','Recommended Action','Remedial Works'],
+          (data || []).map(i => [i.door_location, i.door_asset_id, i.doorset_assembly_type, i.fire_rating, i.inspection_passed, i.engineer_name, new Date(i.created_at).toLocaleDateString('en-GB'), i.projects?.name, i.projects?.client_name, i.recommended_action, i.remedial_works_completed])
+        )
+      },
+    },
+    {
+      id: 'remedials',
+      title: 'Remedials Outstanding',
+      desc: 'Failed doors with repair actions that have not yet been actioned',
+      icon: '🔧',
+      run: async () => {
+        const { data } = await supabase
+          .from('inspections')
+          .select('door_location, door_asset_id, inspection_passed, recommended_action, remedial_works_completed, remedial_actioned, engineer_name, created_at, projects(name, address, postcode, client_name)')
+          .eq('inspection_passed', 'Fail')
+          .eq('remedial_actioned', false)
+          .order('created_at', { ascending: false })
+        downloadCsv('remedials_outstanding.csv',
+          ['Door Location','Door ID','Project','Client','Address','Postcode','Inspector','Inspection Date','Recommended Action','Remedial Works'],
+          (data || []).map(i => [i.door_location, i.door_asset_id, i.projects?.name, i.projects?.client_name, i.projects?.address, i.projects?.postcode, i.engineer_name, new Date(i.created_at).toLocaleDateString('en-GB'), i.recommended_action, i.remedial_works_completed])
+        )
+      },
+    },
+    {
+      id: 'actioned',
+      title: 'Actioned Remedials',
+      desc: 'Remedials that have been marked as completed — who, when, and notes',
+      icon: '✅',
+      run: async () => {
+        const { data } = await supabase
+          .from('inspections')
+          .select('door_location, door_asset_id, recommended_action, remedial_actioned_at, remedial_actioned_by, remedial_action_note, created_at, projects(name, client_name)')
+          .eq('remedial_actioned', true)
+          .order('remedial_actioned_at', { ascending: false })
+        downloadCsv('actioned_remedials.csv',
+          ['Door Location','Door ID','Project','Client','Original Action','Actioned Date','Actioned By','Note','Inspection Date'],
+          (data || []).map(i => [i.door_location, i.door_asset_id, i.projects?.name, i.projects?.client_name, i.recommended_action, i.remedial_actioned_at ? new Date(i.remedial_actioned_at).toLocaleDateString('en-GB') : '', i.remedial_actioned_by, i.remedial_action_note, new Date(i.created_at).toLocaleDateString('en-GB')])
+        )
+      },
+    },
+    {
+      id: 'reinspection',
+      title: 'Reinspection Schedule',
+      desc: 'All doors with their next due date, status, and days remaining',
+      icon: '📅',
+      run: async () => {
+        const { data } = await supabase
+          .from('inspections')
+          .select('door_location, door_asset_id, doorset_assembly_type, inspection_passed, created_at, engineer_name, projects(name, client_name)')
+          .order('created_at', { ascending: false })
+        // Dedupe to latest per door
+        const seen = new Map()
+        for (const ins of (data || [])) {
+          if (!seen.has(ins.door_asset_id)) seen.set(ins.door_asset_id, ins)
+        }
+        const rows = Array.from(seen.values()).map(ins => {
+          const { due, diff, status } = dueInfo(ins)
+          return [
+            ins.door_location, ins.door_asset_id,
+            doorCategory(ins.doorset_assembly_type) === 'flat' ? 'Flat Entrance' : 'Communal',
+            ins.inspection_passed, ins.engineer_name,
+            new Date(ins.created_at).toLocaleDateString('en-GB'),
+            due.toLocaleDateString('en-GB'),
+            status === 'overdue' ? `Overdue by ${Math.abs(diff)} days` : `${diff} days`,
+            status,
+            ins.projects?.name, ins.projects?.client_name,
+          ]
+        }).sort((a, b) => {
+          // sort overdue first, then by days
+          const statusOrder = { overdue: 0, soon: 1, ok: 2 }
+          return (statusOrder[a[8]] - statusOrder[b[8]]) || a[6].localeCompare(b[6])
+        })
+        downloadCsv('reinspection_schedule.csv',
+          ['Door Location','Door ID','Type','Last Result','Inspector','Last Inspected','Next Due','Days Remaining','Status','Project','Client'],
+          rows
+        )
+      },
+    },
+  ]
+
+  async function run(exp) {
+    setBusy(exp.id)
+    try { await exp.run() } catch(e) { alert('Export failed: ' + e.message) }
+    setBusy(null)
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}
+      onClick={onClose}>
+      <div style={{ background: '#0D1F35', borderRadius: 16, border: '1px solid rgba(255,255,255,0.15)', width: '100%', maxWidth: 560, padding: 28, maxHeight: '90vh', overflowY: 'auto' }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <h2 style={{ color: '#fff', margin: 0, fontSize: 20, fontWeight: 800 }}>Export Data</h2>
+            <p style={{ color: '#8A9BAD', margin: '4px 0 0', fontSize: 13 }}>Download data as CSV — opens in Excel</p>
+          </div>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#8A9BAD', fontSize: 22, cursor: 'pointer' }}>✕</button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {exports.map(exp => (
+            <div key={exp.id} style={{ background: '#162840', borderRadius: 10, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14, border: '1px solid #1A3A5C' }}>
+              <span style={{ fontSize: 28 }}>{exp.icon}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>{exp.title}</div>
+                <div style={{ color: '#8A9BAD', fontSize: 12, marginTop: 2 }}>{exp.desc}</div>
+              </div>
+              <button
+                onClick={() => run(exp)}
+                disabled={busy === exp.id}
+                style={{ background: busy === exp.id ? '#1A3A5C' : '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '8px 18px', fontWeight: 700, fontSize: 13, cursor: busy === exp.id ? 'default' : 'pointer', whiteSpace: 'nowrap', opacity: busy === exp.id ? 0.7 : 1, minWidth: 90 }}>
+                {busy === exp.id ? 'Exporting…' : '⬇ Export'}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
