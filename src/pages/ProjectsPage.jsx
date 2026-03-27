@@ -220,6 +220,7 @@ export default function ProjectsPage() {
           <div style={s.headerRight}>
             <span style={s.userEmail}>{user?.email}</span>
             <button style={s.btn} onClick={() => navigate('/users')}>Users</button>
+            <button style={s.btn} onClick={() => { localStorage.removeItem('dashboardLayout2'); setLayout(DEFAULT_LAYOUT) }}>Reset Layout</button>
             <button style={s.btn} onClick={() => supabase.auth.signOut()}>Sign Out</button>
           </div>
         </div>
