@@ -18,6 +18,13 @@ function errorResponse(message: string, status: number) {
   })
 }
 
+function okResponse(body: object) {
+  return new Response(JSON.stringify(body), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status: 200,
+  })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -40,30 +47,67 @@ Deno.serve(async (req) => {
 
     if (profile?.role !== 'admin') return errorResponse('Forbidden', 403)
 
-    // Create the new user
-    const { email, password, role, client_id } = await req.json()
-    if (!email || !password || !role) return errorResponse('email, password and role are required', 400)
+    const body = await req.json()
+    const { action } = body
 
-    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    })
+    // ── CREATE ──────────────────────────────────────────────────────────────
+    if (!action || action === 'create') {
+      const { email, password, role, client_id } = body
+      if (!email || !password || !role) return errorResponse('email, password and role are required', 400)
 
-    if (createError) return errorResponse(createError.message, 400)
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      })
+      if (createError) return errorResponse(createError.message, 400)
 
-    // Create user_profiles row
-    await supabaseAdmin.from('user_profiles').insert({
-      id:        newUser.user.id,
-      email,
-      role,
-      client_id: client_id || null,
-    })
+      await supabaseAdmin.from('user_profiles').insert({
+        id:        newUser.user.id,
+        email,
+        role,
+        client_id: client_id || null,
+        disabled:  false,
+      })
 
-    return new Response(JSON.stringify({ success: true, id: newUser.user.id }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
+      return okResponse({ success: true, id: newUser.user.id })
+    }
+
+    // ── DISABLE ─────────────────────────────────────────────────────────────
+    if (action === 'disable') {
+      const { user_id } = body
+      if (!user_id) return errorResponse('user_id is required', 400)
+
+      await supabaseAdmin.auth.admin.updateUserById(user_id, { ban_duration: '876000h' })
+      await supabaseAdmin.from('user_profiles').update({ disabled: true }).eq('id', user_id)
+
+      return okResponse({ success: true })
+    }
+
+    // ── ENABLE ──────────────────────────────────────────────────────────────
+    if (action === 'enable') {
+      const { user_id } = body
+      if (!user_id) return errorResponse('user_id is required', 400)
+
+      await supabaseAdmin.auth.admin.updateUserById(user_id, { ban_duration: 'none' })
+      await supabaseAdmin.from('user_profiles').update({ disabled: false }).eq('id', user_id)
+
+      return okResponse({ success: true })
+    }
+
+    // ── DELETE ──────────────────────────────────────────────────────────────
+    if (action === 'delete') {
+      const { user_id } = body
+      if (!user_id) return errorResponse('user_id is required', 400)
+
+      await supabaseAdmin.from('user_profiles').delete().eq('id', user_id)
+      await supabaseAdmin.auth.admin.deleteUser(user_id)
+
+      return okResponse({ success: true })
+    }
+
+    return errorResponse('Unknown action', 400)
+
   } catch (e) {
     return errorResponse(e.message, 500)
   }
