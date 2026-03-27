@@ -23,6 +23,7 @@ export default function ProjectDetailPage() {
   const [generatingPdf, setGeneratingPdf] = useState(false)
   const [clients, setClients]         = useState([])
   const [publishing, setPublishing]   = useState(false)
+  const [exportingCsv, setExportingCsv] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -65,6 +66,69 @@ export default function ProjectDetailPage() {
 
   const passCount = inspections.filter(i => i.inspection_passed === 'Pass').length
   const failCount = inspections.filter(i => i.inspection_passed === 'Fail').length
+
+  async function exportCsv() {
+    setExportingCsv(true)
+    try {
+      // Get client CSV codes
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('csv_client_alpha,csv_branch_alpha,csv_contract_alpha,csv_contractor_alpha,csv_depot_alpha,csv_priority_alpha')
+        .eq('id', project.client_id)
+        .single()
+
+      const alphas = clientData || {}
+
+      // Only rows with repair actions
+      const rows = inspections.filter(i => i.recommended_repair_actions?.trim())
+
+      if (rows.length === 0) {
+        alert('No remedial works to export for this project.')
+        setExportingCsv(false)
+        return
+      }
+
+      const headers = [
+        'Client_Alpha','Branch_Alpha','Contract_Alpha','Contractor_Alpha','Depot_Alpha','Priority_Alpha',
+        'Property Ref','Address','Postcode','Job Number','Received Date','Required Date',
+        'Job Description','SOR Code','Qty','SOR Description','Rate','Costcode','Orderno',
+        'Asset_Contact','Asset_Contact_Phone','Asset_Contact_Notes','Asset_Contact_Email',
+      ]
+
+      const csvRows = rows.map(ins => [
+        alphas.csv_client_alpha    || '',
+        alphas.csv_branch_alpha    || '',
+        alphas.csv_contract_alpha  || '',
+        alphas.csv_contractor_alpha || '',
+        alphas.csv_depot_alpha     || '',
+        alphas.csv_priority_alpha  || '',
+        project.address            || '',
+        project.address            || '',
+        project.postcode           || '',
+        '', // Job Number — blank
+        '', // Received Date — blank
+        '', // Required Date — blank
+        ins.recommended_repair_actions || '',
+        '', '', '', '', '', '', '', '', '', '',
+      ])
+
+      const csvContent = [headers, ...csvRows]
+        .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
+        .join('\r\n')
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `${project.name} - Remedial Works.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error(e)
+      alert('Export failed.')
+    }
+    setExportingCsv(false)
+  }
 
   return (
     <div style={styles.page}>
@@ -146,6 +210,13 @@ export default function ProjectDetailPage() {
                 }}
               >
                 {generatingPdf ? 'Generating…' : '⬇ Download PDF'}
+              </button>
+              <button
+                style={{ ...styles.editBtn, background: '#1A3A5C', border: '1px solid #4CAF50', color: '#4CAF50', opacity: exportingCsv ? 0.6 : 1 }}
+                disabled={exportingCsv || inspections.length === 0 || !project?.client_id}
+                onClick={exportCsv}
+              >
+                {exportingCsv ? 'Exporting…' : '⬇ Export Jobs CSV'}
               </button>
               <button
                 style={{
