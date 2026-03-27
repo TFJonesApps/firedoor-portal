@@ -279,21 +279,21 @@ export default function ProjectsPage() {
           isDraggable
         >
             {layout.map(({ i: id }) => (
-              <div key={id} style={{ background: '#162840', borderRadius: 12, border: '1px solid #1A3A5C', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%' }}>
+              <div key={id} style={{ background: '#162840', borderRadius: 12, border: '1px solid rgba(255,255,255,0.18)', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%' }}>
                 {/* Panel header with drag handle */}
-                <div className="panel-drag-handle" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid #1A3A5C', cursor: 'grab', background: '#0D1F35', flexShrink: 0 }}>
+                <div className="panel-drag-handle" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.12)', cursor: 'grab', background: '#0D1F35', flexShrink: 0 }}>
                   <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                    <circle cx="4" cy="3" r="1.2" fill="#4A6580"/>
-                    <circle cx="10" cy="3" r="1.2" fill="#4A6580"/>
-                    <circle cx="4" cy="7" r="1.2" fill="#4A6580"/>
-                    <circle cx="10" cy="7" r="1.2" fill="#4A6580"/>
-                    <circle cx="4" cy="11" r="1.2" fill="#4A6580"/>
-                    <circle cx="10" cy="11" r="1.2" fill="#4A6580"/>
+                    <circle cx="4" cy="3" r="1.2" fill="#8A9BAD"/>
+                    <circle cx="10" cy="3" r="1.2" fill="#8A9BAD"/>
+                    <circle cx="4" cy="7" r="1.2" fill="#8A9BAD"/>
+                    <circle cx="10" cy="7" r="1.2" fill="#8A9BAD"/>
+                    <circle cx="4" cy="11" r="1.2" fill="#8A9BAD"/>
+                    <circle cx="10" cy="11" r="1.2" fill="#8A9BAD"/>
                   </svg>
-                  <span style={{ color: '#4A6580', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', flex: 1 }}>
+                  <span style={{ color: '#fff', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', flex: 1 }}>
                     {PANEL_LABELS[id]}
                   </span>
-                  <span style={{ color: '#243F5C', fontSize: 9 }}>↔ resize corner</span>
+                  <span style={{ color: '#3A5570', fontSize: 9 }}>↔ resize corner</span>
                 </div>
                 {/* Panel content */}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
