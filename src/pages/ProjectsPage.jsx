@@ -73,8 +73,9 @@ export default function ProjectsPage() {
   const [search,           setSearch]           = useState('')
   const [loading,          setLoading]          = useState(true)
   const [user,             setUser]             = useState(null)
-  const [layout,     setLayout]     = useState(loadLayout)
-  const [gridWidth,  setGridWidth]  = useState(window.innerWidth - 64)
+  const [layout,        setLayout]        = useState(loadLayout)
+  const [gridWidth,     setGridWidth]     = useState(window.innerWidth - 64)
+  const [showCalendar,  setShowCalendar]  = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -393,7 +394,14 @@ export default function ProjectsPage() {
 
                 {id === 'reinspection' && (
                   <>
-                    <SectionTitle>Reinspection Due</SectionTitle>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <SectionTitle style={{ margin: 0 }}>Reinspection Due</SectionTitle>
+                      <button
+                        onClick={() => setShowCalendar(true)}
+                        style={{ background: '#1A3A5C', border: '1px solid #243F5C', borderRadius: 6, padding: '4px 10px', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        📅 Calendar
+                      </button>
+                    </div>
                     <div style={s.panel}>
                       {allDueSorted.length === 0
                         ? <p style={{ color: '#4CAF50', fontSize: 13 }}>✓ No doors yet.</p>
@@ -428,6 +436,10 @@ export default function ProjectsPage() {
             ))}
         </GridLayout>
       </div>
+
+      {showCalendar && (
+        <CalendarModal doors={allDueSorted} onClose={() => setShowCalendar(false)} navigate={navigate} />
+      )}
     </div>
   )
 }
@@ -472,6 +484,162 @@ function StatChip({ label, value, color }) {
     <div style={{ textAlign: 'center', flex: 1 }}>
       <div style={{ fontSize: 28, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
       <div style={{ fontSize: 11, color: '#8A9BAD', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+    </div>
+  )
+}
+
+function CalendarModal({ doors, onClose, navigate }) {
+  const today = new Date()
+  const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
+  const [selectedDay, setSelectedDay] = useState(null)
+
+  const year  = viewDate.getFullYear()
+  const month = viewDate.getMonth()
+  const monthName = viewDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+
+  // Build a map: 'YYYY-MM-DD' -> [door, door, ...]
+  const doorsByDay = useMemo(() => {
+    const map = {}
+    doors.forEach(ins => {
+      const { due } = dueInfo(ins)
+      const key = due.toISOString().slice(0, 10)
+      if (!map[key]) map[key] = []
+      map[key].push(ins)
+    })
+    return map
+  }, [doors])
+
+  // Build calendar grid (Mon–Sun)
+  const firstDay = new Date(year, month, 1)
+  const lastDay  = new Date(year, month + 1, 0)
+  // Monday = 0 offset
+  const startOffset = (firstDay.getDay() + 6) % 7
+  const cells = []
+  for (let i = 0; i < startOffset; i++) cells.push(null)
+  for (let d = 1; d <= lastDay.getDate(); d++) cells.push(new Date(year, month, d))
+
+  const selectedKey   = selectedDay ? selectedDay.toISOString().slice(0, 10) : null
+  const selectedDoors = selectedKey ? (doorsByDay[selectedKey] || []) : []
+
+  function dayColor(doorsOnDay) {
+    if (!doorsOnDay?.length) return null
+    const statuses = doorsOnDay.map(ins => dueInfo(ins).status)
+    if (statuses.includes('overdue')) return '#F44336'
+    if (statuses.includes('soon'))    return '#FF9800'
+    return '#4CAF50'
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}
+      onClick={onClose}>
+      <div style={{ background: '#0D1F35', borderRadius: 16, border: '1px solid rgba(255,255,255,0.15)', width: '100%', maxWidth: 640, padding: 28, maxHeight: '90vh', overflowY: 'auto' }}
+        onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button onClick={() => setViewDate(new Date(year, month - 1, 1))}
+              style={{ background: '#162840', border: '1px solid #243F5C', borderRadius: 6, color: '#fff', padding: '6px 12px', cursor: 'pointer', fontSize: 16 }}>‹</button>
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: 18, minWidth: 160, textAlign: 'center' }}>{monthName}</span>
+            <button onClick={() => setViewDate(new Date(year, month + 1, 1))}
+              style={{ background: '#162840', border: '1px solid #243F5C', borderRadius: 6, color: '#fff', padding: '6px 12px', cursor: 'pointer', fontSize: 16 }}>›</button>
+          </div>
+          <button onClick={onClose}
+            style={{ background: 'transparent', border: 'none', color: '#8A9BAD', fontSize: 22, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+        </div>
+
+        {/* Day-of-week headers */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
+          {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => (
+            <div key={d} style={{ textAlign: 'center', color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', padding: '4px 0' }}>{d}</div>
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+          {cells.map((date, i) => {
+            if (!date) return <div key={`empty-${i}`} />
+            const key       = date.toISOString().slice(0, 10)
+            const doorsHere = doorsByDay[key] || []
+            const color     = dayColor(doorsHere)
+            const isToday   = date.toDateString() === today.toDateString()
+            const isSelected = selectedKey === key
+            const overdue   = doorsHere.filter(d => dueInfo(d).status === 'overdue')
+            const soon      = doorsHere.filter(d => dueInfo(d).status === 'soon')
+            const ok        = doorsHere.filter(d => dueInfo(d).status === 'ok')
+
+            return (
+              <div key={key}
+                onClick={() => setSelectedDay(isSelected ? null : date)}
+                style={{
+                  background: isSelected ? '#1A3A5C' : '#162840',
+                  border: isToday ? '2px solid #EEFF00' : isSelected ? '2px solid #4A9BAD' : '1px solid #1A3A5C',
+                  borderRadius: 8, padding: '6px 4px', minHeight: 56, cursor: doorsHere.length ? 'pointer' : 'default',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                  opacity: doorsHere.length === 0 ? 0.4 : 1,
+                }}>
+                <span style={{ color: isToday ? '#EEFF00' : '#fff', fontSize: 13, fontWeight: isToday ? 700 : 400 }}>
+                  {date.getDate()}
+                </span>
+                {doorsHere.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'center' }}>
+                    {overdue.length > 0 && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#F44336' }} />}
+                    {soon.length   > 0 && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF9800' }} />}
+                    {ok.length     > 0 && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4CAF50' }} />}
+                  </div>
+                )}
+                {doorsHere.length > 0 && (
+                  <span style={{ fontSize: 10, fontWeight: 700, color }}>
+                    {doorsHere.length}
+                  </span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Legend */}
+        <div style={{ display: 'flex', gap: 16, marginTop: 16, justifyContent: 'center' }}>
+          {[['#F44336','Overdue'],['#FF9800','Due soon'],['#4CAF50','On track']].map(([c, l]) => (
+            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: c, display: 'inline-block' }} />
+              <span style={{ color: '#8A9BAD', fontSize: 12 }}>{l}</span>
+            </div>
+          ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 14, height: 14, borderRadius: 3, border: '2px solid #EEFF00', display: 'inline-block' }} />
+            <span style={{ color: '#8A9BAD', fontSize: 12 }}>Today</span>
+          </div>
+        </div>
+
+        {/* Selected day doors */}
+        {selectedDay && (
+          <div style={{ marginTop: 20, borderTop: '1px solid #1A3A5C', paddingTop: 16 }}>
+            <p style={{ color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
+              {selectedDay.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} — {selectedDoors.length} door{selectedDoors.length !== 1 ? 's' : ''}
+            </p>
+            {selectedDoors.map(ins => {
+              const { status, diff } = dueInfo(ins)
+              const color = status === 'overdue' ? '#F44336' : status === 'soon' ? '#FF9800' : '#4CAF50'
+              const label = status === 'overdue' ? `Overdue by ${Math.abs(diff)}d` : `Due in ${diff}d`
+              return (
+                <div key={ins.id}
+                  onClick={() => ins.project_id && navigate(`/project/${ins.project_id}`)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: '#162840', borderRadius: 8, marginBottom: 6, borderLeft: `3px solid ${color}`, cursor: 'pointer' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: '#fff', fontWeight: 600, fontSize: 13 }}>{ins.door_location || ins.door_asset_id || '—'}</div>
+                    <div style={{ color: '#8A9BAD', fontSize: 12 }}>{ins.projects?.name || '—'} · {ins.projects?.client_name || '—'}</div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                    <span style={{ fontSize: 11, color, fontWeight: 700 }}>{label}</span>
+                    <span style={{ fontSize: 10, color: '#8A9BAD' }}>{doorCategory(ins.doorset_assembly_type) === 'flat' ? 'FLAT' : 'COMMUNAL'}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
