@@ -9,12 +9,12 @@ const PANEL_LABELS = {
 }
 
 const DEFAULT_LAYOUT = [
-  { i: 'projects',     x: 0, y: 0,  w: 8, h: 12, minW: 3, minH: 4 },
-  { i: 'recent',       x: 8, y: 0,  w: 4, h: 12, minW: 3, minH: 4 },
-  { i: 'activity',     x: 0, y: 12, w: 4, h: 8,  minW: 3, minH: 3 },
-  { i: 'remedials',    x: 4, y: 12, w: 4, h: 8,  minW: 3, minH: 3 },
-  { i: 'reinspection', x: 8, y: 12, w: 4, h: 10, minW: 3, minH: 4 },
-  { i: 'workload',     x: 0, y: 20, w: 4, h: 6,  minW: 3, minH: 3 },
+  { i: 'projects',     x: 0, y: 0,  w: 8, h: 12, minW: 4, minH: 6 },
+  { i: 'recent',       x: 8, y: 0,  w: 4, h: 12, minW: 3, minH: 6 },
+  { i: 'activity',     x: 0, y: 12, w: 4, h: 8,  minW: 3, minH: 5 },
+  { i: 'remedials',    x: 4, y: 12, w: 4, h: 8,  minW: 3, minH: 5 },
+  { i: 'reinspection', x: 8, y: 12, w: 4, h: 10, minW: 3, minH: 6 },
+  { i: 'workload',     x: 0, y: 20, w: 4, h: 6,  minW: 3, minH: 4 },
 ]
 
 function loadLayout() {
@@ -273,7 +273,7 @@ export default function ProjectsPage() {
           isDraggable
         >
             {layout.map(({ i: id }) => (
-              <div key={id} style={{ background: '#162840', borderRadius: 12, border: '1px solid #1A3A5C', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div key={id} style={{ background: '#162840', borderRadius: 12, border: '1px solid #1A3A5C', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%' }}>
                 {/* Panel header with drag handle */}
                 <div className="panel-drag-handle" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid #1A3A5C', cursor: 'grab', background: '#0D1F35', flexShrink: 0 }}>
                   <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
