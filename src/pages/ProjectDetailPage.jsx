@@ -41,14 +41,20 @@ export default function ProjectDetailPage() {
   const [publishing,        setPublishing]        = useState(false)
   const [exportingCsv,      setExportingCsv]      = useState(false)
   const [doorSearch,        setDoorSearch]        = useState('')
-  const [doorFilter,        setDoorFilter]        = useState('')      // '' | 'Pass' | 'Fail'
-  const [doorSort,          setDoorSort]          = useState('date')  // 'date' | 'name' | 'result'
+  const [doorFilter,        setDoorFilter]        = useState('')
+  const [doorSort,          setDoorSort]          = useState('date')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting,          setDeleting]          = useState(false)
+  const [currentUser,       setCurrentUser]       = useState(null)
+  // Remedial action modal
+  const [actionModal,       setActionModal]       = useState(null)  // inspection obj
+  const [actionNote,        setActionNote]        = useState('')
+  const [actioning,         setActioning]         = useState(false)
 
   useEffect(() => {
     fetchData()
     supabase.from('clients').select('*').order('name').then(({ data }) => setClients(data || []))
+    supabase.auth.getUser().then(({ data: { user } }) => setCurrentUser(user))
   }, [id])
 
   async function fetchData() {
@@ -93,6 +99,31 @@ export default function ProjectDetailPage() {
     navigate('/')
   }
 
+  async function markActioned() {
+    if (!actionModal) return
+    setActioning(true)
+    await supabase.from('inspections').update({
+      remedial_actioned:    true,
+      remedial_actioned_at: new Date().toISOString(),
+      remedial_actioned_by: currentUser?.email || 'Unknown',
+      remedial_action_note: actionNote.trim() || null,
+    }).eq('id', actionModal.id)
+    setActionModal(null)
+    setActionNote('')
+    setActioning(false)
+    await fetchData()
+  }
+
+  async function undoActioned(inspectionId) {
+    await supabase.from('inspections').update({
+      remedial_actioned:    false,
+      remedial_actioned_at: null,
+      remedial_actioned_by: null,
+      remedial_action_note: null,
+    }).eq('id', inspectionId)
+    await fetchData()
+  }
+
   async function exportCsv() {
     setExportingCsv(true)
     try {
@@ -102,7 +133,6 @@ export default function ProjectDetailPage() {
       )
       if (remedials.length === 0) { alert('No remedial jobs to export for this project.'); setExportingCsv(false); return }
 
-      // Fetch client alpha codes
       let alphas = { alpha_client: '', alpha_branch: '', alpha_contract: '', alpha_contractor: 'TFJ', alpha_depot: 'HQ', alpha_priority: 'TARGET' }
       if (project.client_id) {
         const { data: clientData } = await supabase.from('clients').select('alpha_client,alpha_branch,alpha_contract,alpha_contractor,alpha_depot,alpha_priority').eq('id', project.client_id).single()
@@ -122,12 +152,10 @@ export default function ProjectDetailPage() {
         alphas.alpha_contractor || 'TFJ',
         alphas.alpha_depot     || 'HQ',
         alphas.alpha_priority  || 'TARGET',
-        '',                    // Property Ref — fill manually
+        '',
         project.address        || '',
         project.postcode       || '',
-        '',                    // Job Number — blank
-        '',                    // Received Date
-        '',                    // Required Date
+        '', '', '',
         `Fire Door Repair - ${i.door_location || i.door_asset_id || 'Unknown'}: ${i.remedial_works_completed || i.recommended_action || ''}`,
         '', '', '', '', '', '', '', '', '', '',
       ])
@@ -141,13 +169,12 @@ export default function ProjectDetailPage() {
     setExportingCsv(false)
   }
 
-  // Stats
-  const passCount      = inspections.filter(i => i.inspection_passed === 'Pass').length
-  const failCount      = inspections.filter(i => i.inspection_passed === 'Fail').length
-  const passRate       = inspections.length > 0 ? Math.round((passCount / inspections.length) * 100) : null
-  const lastInspected  = inspections[0] ? new Date(inspections[0].created_at).toLocaleDateString('en-GB') : null
+  const passCount     = inspections.filter(i => i.inspection_passed === 'Pass').length
+  const failCount     = inspections.filter(i => i.inspection_passed === 'Fail').length
+  const actionedCount = inspections.filter(i => i.remedial_actioned).length
+  const passRate      = inspections.length > 0 ? Math.round((passCount / inspections.length) * 100) : null
+  const lastInspected = inspections[0] ? new Date(inspections[0].created_at).toLocaleDateString('en-GB') : null
 
-  // Filter + sort inspections
   const visibleInspections = useMemo(() => {
     let list = [...inspections]
     if (doorSearch)  list = list.filter(i =>
@@ -181,15 +208,43 @@ export default function ProjectDetailPage() {
               This will permanently delete <strong style={{ color: '#fff' }}>{project?.name}</strong> and all {inspections.length} inspection{inspections.length !== 1 ? 's' : ''}. This cannot be undone.
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                style={{ background: '#F44336', color: '#fff', border: 'none', borderRadius: 6, padding: '10px 20px', fontWeight: 700, fontSize: 14, cursor: 'pointer', opacity: deleting ? 0.6 : 1 }}
-                disabled={deleting}
-                onClick={deleteProject}
-              >{deleting ? 'Deleting…' : 'Yes, Delete'}</button>
-              <button
-                style={{ background: 'transparent', border: '1px solid #8A9BAD', borderRadius: 6, padding: '10px 20px', color: '#8A9BAD', fontSize: 14, cursor: 'pointer' }}
-                onClick={() => setShowDeleteConfirm(false)}
-              >Cancel</button>
+              <button style={{ background: '#F44336', color: '#fff', border: 'none', borderRadius: 6, padding: '10px 20px', fontWeight: 700, fontSize: 14, cursor: 'pointer', opacity: deleting ? 0.6 : 1 }}
+                disabled={deleting} onClick={deleteProject}>{deleting ? 'Deleting…' : 'Yes, Delete'}</button>
+              <button style={{ background: 'transparent', border: '1px solid #8A9BAD', borderRadius: 6, padding: '10px 20px', color: '#8A9BAD', fontSize: 14, cursor: 'pointer' }}
+                onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mark Actioned modal */}
+      {actionModal && (
+        <div style={styles.lightboxOverlay} onClick={() => { setActionModal(null); setActionNote('') }}>
+          <div style={{ background: '#162840', borderRadius: 14, padding: 28, maxWidth: 460, width: '90%', border: '1px solid #4CAF50' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ color: '#fff', margin: '0 0 6px', fontSize: 18 }}>Mark Remedial Actioned</h3>
+            <p style={{ color: GREY, margin: '0 0 6px', fontSize: 13 }}>
+              <strong style={{ color: '#fff' }}>{actionModal.door_location || actionModal.door_asset_id}</strong>
+            </p>
+            {actionModal.recommended_action && (
+              <p style={{ color: '#FF9800', margin: '0 0 16px', fontSize: 13, background: '#FF980011', borderRadius: 6, padding: '8px 12px', border: '1px solid #FF980033' }}>
+                {actionModal.recommended_action}
+              </p>
+            )}
+            <label style={{ color: GREY, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Action Note (optional)</label>
+            <textarea
+              style={{ width: '100%', marginTop: 8, background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, resize: 'vertical', minHeight: 80, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              placeholder="e.g. Contractor attended 27/03/2026, closer replaced…"
+              value={actionNote}
+              onChange={e => setActionNote(e.target.value)}
+            />
+            <p style={{ color: GREY, fontSize: 12, margin: '8px 0 20px' }}>Logged as: <strong style={{ color: '#fff' }}>{currentUser?.email}</strong></p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button style={{ background: '#4CAF50', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', opacity: actioning ? 0.6 : 1 }}
+                disabled={actioning} onClick={markActioned}>
+                {actioning ? 'Saving…' : '✓ Confirm Actioned'}
+              </button>
+              <button style={{ background: 'transparent', border: '1px solid #8A9BAD', borderRadius: 8, padding: '10px 18px', color: '#8A9BAD', fontSize: 14, cursor: 'pointer' }}
+                onClick={() => { setActionModal(null); setActionNote('') }}>Cancel</button>
             </div>
           </div>
         </div>
@@ -281,6 +336,7 @@ export default function ProjectDetailPage() {
           <Stat label="Pass"     value={passCount}          color={PASS_COLOR} />
           <Stat label="Fail"     value={failCount}          color={FAIL_COLOR} />
           {passRate !== null && <Stat label="Pass Rate" value={`${passRate}%`} color={passRate >= 80 ? PASS_COLOR : passRate >= 50 ? '#FF9800' : FAIL_COLOR} />}
+          {failCount > 0 && <Stat label="Actioned" value={`${actionedCount}/${failCount}`} color={actionedCount === failCount ? PASS_COLOR : '#FF9800'} />}
           {lastInspected && (
             <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
               <div style={{ color: GREY, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Last Inspected</div>
@@ -353,6 +409,8 @@ export default function ProjectDetailPage() {
             expanded={expanded === ins.id}
             onToggle={() => setExpanded(expanded === ins.id ? null : ins.id)}
             onPhoto={setLightbox}
+            onMarkActioned={() => { setActionModal(ins); setActionNote('') }}
+            onUndoActioned={() => undoActioned(ins.id)}
           />
         ))}
       </div>
@@ -360,7 +418,7 @@ export default function ProjectDetailPage() {
   )
 }
 
-function InspectionCard({ inspection: ins, expanded, onToggle, onPhoto }) {
+function InspectionCard({ inspection: ins, expanded, onToggle, onPhoto, onMarkActioned, onUndoActioned }) {
   const passed    = ins.inspection_passed === 'Pass'
   const passColor = passed ? PASS_COLOR : FAIL_COLOR
   const date      = new Date(ins.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -412,8 +470,12 @@ function InspectionCard({ inspection: ins, expanded, onToggle, onPhoto }) {
     ['Inspector',            ins.engineer_name],
   ].filter(([, v]) => v)
 
+  const actionedAt = ins.remedial_actioned_at
+    ? new Date(ins.remedial_actioned_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : null
+
   return (
-    <div style={styles.card}>
+    <div style={{ ...styles.card, opacity: ins.remedial_actioned ? 0.75 : 1 }}>
       <div style={styles.cardHeader} onClick={onToggle}>
         <div style={{ width: 4, minHeight: 52, background: passColor, borderRadius: 2, flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -426,14 +488,46 @@ function InspectionCard({ inspection: ins, expanded, onToggle, onPhoto }) {
           <div style={{ marginTop: 4, fontSize: 12, color: dueColor }}>
             {doorCategory(ins.doorset_assembly_type) === 'flat' ? 'FLAT' : 'COMMUNAL'} · {dueLabel}
           </div>
+          {/* Actioned info */}
+          {ins.remedial_actioned && (
+            <div style={{ marginTop: 5, fontSize: 12, color: PASS_COLOR, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span>✓ Actioned {actionedAt} by {ins.remedial_actioned_by}</span>
+              {ins.remedial_action_note && <span style={{ color: GREY }}>· {ins.remedial_action_note}</span>}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
           <span style={{ ...styles.badge, background: `${passColor}22`, color: passColor }}>
             {ins.inspection_passed || '—'}
           </span>
+          {ins.remedial_actioned && (
+            <span style={{ ...styles.badge, background: '#4CAF5022', color: '#4CAF50', fontSize: 11 }}>✓ Actioned</span>
+          )}
           <span style={{ color: GREY, fontSize: 16 }}>{expanded ? '▲' : '▼'}</span>
         </div>
       </div>
+
+      {/* Mark actioned / undo bar — shown on fail doors without expanding */}
+      {!passed && (
+        <div style={{ padding: '8px 16px 8px 24px', background: '#0D1F35', borderTop: '1px solid #1A3A5C', display: 'flex', alignItems: 'center', gap: 10 }} onClick={e => e.stopPropagation()}>
+          {ins.remedial_actioned ? (
+            <button
+              style={{ background: 'transparent', border: '1px solid #8A9BAD', borderRadius: 6, padding: '5px 14px', color: '#8A9BAD', fontSize: 12, cursor: 'pointer' }}
+              onClick={onUndoActioned}>
+              Undo Actioned
+            </button>
+          ) : (
+            <button
+              style={{ background: '#4CAF5022', border: '1px solid #4CAF50', borderRadius: 6, padding: '5px 14px', color: '#4CAF50', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              onClick={onMarkActioned}>
+              ✓ Mark Actioned
+            </button>
+          )}
+          {ins.recommended_action && !ins.remedial_actioned && (
+            <span style={{ color: '#FF9800', fontSize: 12 }}>{ins.recommended_action}</span>
+          )}
+        </div>
+      )}
 
       {expanded && (
         <div style={styles.cardBody}>
