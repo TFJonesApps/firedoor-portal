@@ -2,13 +2,19 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
+const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`
+
 export default function UsersPage() {
   const navigate = useNavigate()
   const [users, setUsers]     = useState([])
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving]   = useState(null) // user id being saved
-  const [edits, setEdits]     = useState({})   // { [id]: { role, client_id } }
+  const [saving, setSaving]   = useState(null)
+  const [edits, setEdits]     = useState({})
+  const [showCreate, setShowCreate] = useState(false)
+  const [creating, setCreating]     = useState(false)
+  const [createError, setCreateError] = useState('')
+  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'client', client_id: '' })
 
   useEffect(() => {
     Promise.all([loadUsers(), loadClients()])
@@ -29,6 +35,36 @@ export default function UsersPage() {
     setClients(data || [])
   }
 
+  async function createUser(e) {
+    e.preventDefault()
+    setCreating(true)
+    setCreateError('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          email:     newUser.email,
+          password:  newUser.password,
+          role:      newUser.role,
+          client_id: newUser.client_id || null,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to create user')
+      setShowCreate(false)
+      setNewUser({ email: '', password: '', role: 'client', client_id: '' })
+      await loadUsers()
+    } catch (err) {
+      setCreateError(err.message)
+    }
+    setCreating(false)
+  }
+
   function getEdit(user) {
     return edits[user.id] ?? { role: user.role, client_id: user.client_id }
   }
@@ -47,7 +83,6 @@ export default function UsersPage() {
       .from('user_profiles')
       .update({ role: edit.role, client_id: edit.client_id || null })
       .eq('id', user.id)
-    // clear local edit
     setEdits(prev => { const n = { ...prev }; delete n[user.id]; return n })
     await loadUsers()
     setSaving(null)
@@ -61,20 +96,81 @@ export default function UsersPage() {
 
   return (
     <div style={s.page}>
-      {/* Header */}
       <div style={s.header}>
         <div style={s.headerLeft}>
           <img src="/tfj_logo.png" alt="TF Jones" style={s.logo} />
         </div>
         <div style={s.headerRight}>
           <button style={s.backBtn} onClick={() => navigate('/')}>← Projects</button>
-          <button style={s.signOutBtn} onClick={() => supabase.auth.signOut()}>Sign Out</button>
+          <button style={s.backBtn} onClick={() => supabase.auth.signOut()}>Sign Out</button>
         </div>
       </div>
 
       <div style={s.body}>
-        <h1 style={s.title}>User Management</h1>
-        <p style={s.sub}>Assign roles and clients to portal users. Create accounts first via Supabase Auth dashboard, then configure them here.</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <h1 style={s.title}>User Management</h1>
+          <button style={s.createBtn} onClick={() => { setShowCreate(v => !v); setCreateError('') }}>
+            {showCreate ? 'Cancel' : '+ New User'}
+          </button>
+        </div>
+
+        {/* Create user form */}
+        {showCreate && (
+          <form onSubmit={createUser} style={s.createForm}>
+            <div style={s.formGrid}>
+              <div style={s.formField}>
+                <label style={s.label}>Email</label>
+                <input
+                  style={s.input}
+                  type="email"
+                  required
+                  placeholder="user@example.com"
+                  value={newUser.email}
+                  onChange={e => setNewUser(v => ({ ...v, email: e.target.value }))}
+                />
+              </div>
+              <div style={s.formField}>
+                <label style={s.label}>Password</label>
+                <input
+                  style={s.input}
+                  type="password"
+                  required
+                  placeholder="Min 6 characters"
+                  value={newUser.password}
+                  onChange={e => setNewUser(v => ({ ...v, password: e.target.value }))}
+                />
+              </div>
+              <div style={s.formField}>
+                <label style={s.label}>Role</label>
+                <select
+                  style={s.input}
+                  value={newUser.role}
+                  onChange={e => setNewUser(v => ({ ...v, role: e.target.value, client_id: '' }))}
+                >
+                  <option value="admin">Admin</option>
+                  <option value="inspector">Inspector</option>
+                  <option value="client">Client</option>
+                </select>
+              </div>
+              <div style={s.formField}>
+                <label style={s.label}>Client</label>
+                <select
+                  style={s.input}
+                  value={newUser.client_id}
+                  onChange={e => setNewUser(v => ({ ...v, client_id: e.target.value }))}
+                  disabled={newUser.role !== 'client'}
+                >
+                  <option value="">— None —</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            </div>
+            {createError && <p style={s.error}>{createError}</p>}
+            <button style={s.saveBtn} type="submit" disabled={creating}>
+              {creating ? 'Creating…' : 'Create User'}
+            </button>
+          </form>
+        )}
 
         {loading ? (
           <div style={s.centred}><Spinner /></div>
@@ -93,7 +189,7 @@ export default function UsersPage() {
               </thead>
               <tbody>
                 {users.map(user => {
-                  const edit = getEdit(user)
+                  const edit  = getEdit(user)
                   const dirty = isDirty(user)
                   return (
                     <tr key={user.id} style={s.tr}>
@@ -101,11 +197,7 @@ export default function UsersPage() {
                         <span style={s.email}>{user.email || <span style={s.noEmail}>No email recorded — user must log in once</span>}</span>
                       </td>
                       <td style={s.td}>
-                        <select
-                          style={s.select}
-                          value={edit.role || 'client'}
-                          onChange={e => setField(user.id, 'role', e.target.value)}
-                        >
+                        <select style={s.select} value={edit.role || 'client'} onChange={e => setField(user.id, 'role', e.target.value)}>
                           <option value="admin">Admin</option>
                           <option value="inspector">Inspector</option>
                           <option value="client">Client</option>
@@ -119,9 +211,7 @@ export default function UsersPage() {
                           disabled={edit.role === 'admin' || edit.role === 'inspector'}
                         >
                           <option value="">— None —</option>
-                          {clients.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
+                          {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                       </td>
                       <td style={s.tdAction}>
@@ -150,26 +240,31 @@ function Spinner() {
 }
 
 const s = {
-  page:      { minHeight: '100vh', background: '#0D1F35', fontFamily: 'system-ui, sans-serif' },
-  header:    { background: '#0D1F35', borderBottom: '3px solid #EEFF00', padding: '0 28px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  headerLeft:{ display: 'flex', alignItems: 'center' },
+  page:       { minHeight: '100vh', background: '#0D1F35', fontFamily: 'system-ui, sans-serif' },
+  header:     { background: '#0D1F35', borderBottom: '3px solid #EEFF00', padding: '0 28px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  headerLeft: { display: 'flex', alignItems: 'center' },
   headerRight:{ display: 'flex', alignItems: 'center', gap: 12 },
-  logo:      { height: 42, objectFit: 'contain' },
-  backBtn:   { background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, padding: '7px 14px', color: '#fff', fontSize: 13, cursor: 'pointer' },
-  signOutBtn:{ background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, padding: '7px 14px', color: '#fff', fontSize: 13, cursor: 'pointer' },
-  body:      { padding: '32px 28px', maxWidth: 900, margin: '0 auto' },
-  title:     { color: '#fff', fontSize: 26, fontWeight: 800, margin: '0 0 8px' },
-  sub:       { color: '#8A9BAD', fontSize: 14, margin: '0 0 28px', lineHeight: 1.6 },
-  centred:   { display: 'flex', justifyContent: 'center', paddingTop: 60 },
-  empty:     { color: '#8A9BAD', textAlign: 'center', paddingTop: 60 },
-  tableWrap: { background: '#162840', borderRadius: 14, overflow: 'hidden' },
-  table:     { width: '100%', borderCollapse: 'collapse' },
-  th:        { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '14px 20px', textAlign: 'left', borderBottom: '1px solid #1A3A5C' },
-  tr:        { borderBottom: '1px solid #1A3A5C' },
-  td:        { padding: '14px 20px', verticalAlign: 'middle' },
-  tdAction:  { padding: '14px 20px', verticalAlign: 'middle', textAlign: 'right' },
-  email:     { color: '#fff', fontSize: 14, fontWeight: 600 },
-  noEmail:   { color: '#8A9BAD', fontSize: 13, fontStyle: 'italic', fontWeight: 400 },
-  select:    { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '8px 12px', color: '#fff', fontSize: 14, width: '100%' },
-  saveBtn:   { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 700 },
+  logo:       { height: 42, objectFit: 'contain' },
+  backBtn:    { background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, padding: '7px 14px', color: '#fff', fontSize: 13, cursor: 'pointer' },
+  body:       { padding: '32px 28px', maxWidth: 900, margin: '0 auto' },
+  title:      { color: '#fff', fontSize: 26, fontWeight: 800, margin: 0 },
+  createBtn:  { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
+  createForm: { background: '#162840', borderRadius: 14, padding: '20px 24px', marginBottom: 24 },
+  formGrid:   { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 },
+  formField:  { display: 'flex', flexDirection: 'column', gap: 6 },
+  label:      { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' },
+  input:      { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, outline: 'none' },
+  error:      { color: '#F44336', fontSize: 13, margin: '0 0 12px' },
+  centred:    { display: 'flex', justifyContent: 'center', paddingTop: 60 },
+  empty:      { color: '#8A9BAD', textAlign: 'center', paddingTop: 60 },
+  tableWrap:  { background: '#162840', borderRadius: 14, overflow: 'hidden', marginTop: 24 },
+  table:      { width: '100%', borderCollapse: 'collapse' },
+  th:         { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '14px 20px', textAlign: 'left', borderBottom: '1px solid #1A3A5C' },
+  tr:         { borderBottom: '1px solid #1A3A5C' },
+  td:         { padding: '14px 20px', verticalAlign: 'middle' },
+  tdAction:   { padding: '14px 20px', verticalAlign: 'middle', textAlign: 'right' },
+  email:      { color: '#fff', fontSize: 14, fontWeight: 600 },
+  noEmail:    { color: '#8A9BAD', fontSize: 13, fontStyle: 'italic', fontWeight: 400 },
+  select:     { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '8px 12px', color: '#fff', fontSize: 14, width: '100%' },
+  saveBtn:    { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
 }
