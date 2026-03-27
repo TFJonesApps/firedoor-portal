@@ -1,4 +1,19 @@
+@import 'react-grid-layout/css/styles.css';
+@import 'react-resizable/css/styles.css';
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* react-grid-layout resize handle styling */
+.react-resizable-handle {
+  background-image: none !important;
+  border-right: 2px solid #EEFF00;
+  border-bottom: 2px solid #EEFF00;
+  border-radius: 0 0 4px 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.react-grid-item:hover .react-resizable-handle { opacity: 0.6; }
+.react-grid-item.react-grid-placeholder { background: #EEFF0022 !important; border: 1px dashed #EEFF00; border-radius: 10px; }
 
 :root {
   --navy:      #0D1F35;

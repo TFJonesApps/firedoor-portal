@@ -1,35 +1,34 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import {
-  DndContext, closestCenter, PointerSensor, useSensor, useSensors,
-} from '@dnd-kit/core'
-import {
-  arrayMove, SortableContext, useSortable, rectSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import GridLayout from 'react-grid-layout'
 
-const DEFAULT_PANEL_ORDER = ['projects', 'activity', 'recent', 'remedials', 'reinspection', 'workload']
-const DEFAULT_PANEL_SIZES = { projects: 1, activity: 1, recent: 1, remedials: 1, reinspection: 1, workload: 1 }
+const PANEL_LABELS = {
+  projects: 'Projects', activity: 'Activity Feed', recent: 'Recent Inspections',
+  remedials: 'Remedial Works', reinspection: 'Reinspection Due', workload: 'Inspector Workload',
+}
 
-function loadPanelOrder() {
+const DEFAULT_LAYOUT = [
+  { i: 'projects',     x: 0, y: 0,  w: 8, h: 12, minW: 3, minH: 4 },
+  { i: 'recent',       x: 8, y: 0,  w: 4, h: 12, minW: 3, minH: 4 },
+  { i: 'activity',     x: 0, y: 12, w: 4, h: 8,  minW: 3, minH: 3 },
+  { i: 'remedials',    x: 4, y: 12, w: 4, h: 8,  minW: 3, minH: 3 },
+  { i: 'reinspection', x: 8, y: 12, w: 4, h: 10, minW: 3, minH: 4 },
+  { i: 'workload',     x: 0, y: 20, w: 4, h: 6,  minW: 3, minH: 3 },
+]
+
+function loadLayout() {
   try {
-    const saved = localStorage.getItem('dashboardPanelOrder')
+    const saved = localStorage.getItem('dashboardLayout2')
     if (saved) {
       const parsed = JSON.parse(saved)
-      const missing = DEFAULT_PANEL_ORDER.filter(p => !parsed.includes(p))
+      // merge in any new panels not in saved layout
+      const ids = parsed.map(p => p.i)
+      const missing = DEFAULT_LAYOUT.filter(p => !ids.includes(p.i))
       return [...parsed, ...missing]
     }
   } catch {}
-  return DEFAULT_PANEL_ORDER
-}
-
-function loadPanelSizes() {
-  try {
-    const saved = localStorage.getItem('dashboardPanelSizes')
-    if (saved) return { ...DEFAULT_PANEL_SIZES, ...JSON.parse(saved) }
-  } catch {}
-  return { ...DEFAULT_PANEL_SIZES }
+  return DEFAULT_LAYOUT
 }
 
 const FLAT_DAYS     = 365
@@ -69,27 +68,19 @@ export default function ProjectsPage() {
   const [search,           setSearch]           = useState('')
   const [loading,          setLoading]          = useState(true)
   const [user,             setUser]             = useState(null)
-  const [panelOrder,       setPanelOrder]       = useState(loadPanelOrder)
-  const [panelSizes,       setPanelSizes]       = useState(loadPanelSizes)
-
-  function cycleSize(id) {
-    setPanelSizes(prev => {
-      const next = { ...prev, [id]: prev[id] === 1 ? 2 : prev[id] === 2 ? 3 : 1 }
-      localStorage.setItem('dashboardPanelSizes', JSON.stringify(next))
-      return next
-    })
-  }
+  const [layout,     setLayout]     = useState(loadLayout)
+  const [gridWidth,  setGridWidth]  = useState(window.innerWidth - 64)
   const navigate = useNavigate()
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  useEffect(() => {
+    const onResize = () => setGridWidth(window.innerWidth - 64)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
-  function handleDragEnd({ active, over }) {
-    if (!over || active.id === over.id) return
-    setPanelOrder(prev => {
-      const next = arrayMove(prev, prev.indexOf(active.id), prev.indexOf(over.id))
-      localStorage.setItem('dashboardPanelOrder', JSON.stringify(next))
-      return next
-    })
+  function handleLayoutChange(newLayout) {
+    setLayout(newLayout)
+    localStorage.setItem('dashboardLayout2', JSON.stringify(newLayout))
   }
 
   useEffect(() => {
@@ -267,12 +258,39 @@ export default function ProjectsPage() {
         </select>
       </div>
 
-      {/* ── Draggable panel grid ── */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={panelOrder} strategy={rectSortingStrategy}>
-          <div style={s.body}>
-            {panelOrder.map(id => (
-              <SortablePanel key={id} id={id} span={panelSizes[id]} onResize={() => cycleSize(id)}>
+      {/* ── react-grid-layout dashboard ── */}
+      <div style={{ padding: '0 32px 40px', maxWidth: 1600, margin: '0 auto' }}>
+        <GridLayout
+          layout={layout}
+          cols={12}
+          rowHeight={30}
+          width={gridWidth}
+          onLayoutChange={handleLayoutChange}
+          draggableHandle=".panel-drag-handle"
+          margin={[10, 10]}
+          containerPadding={[0, 0]}
+          isResizable
+          isDraggable
+        >
+            {layout.map(({ i: id }) => (
+              <div key={id} style={{ background: '#162840', borderRadius: 12, border: '1px solid #1A3A5C', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                {/* Panel header with drag handle */}
+                <div className="panel-drag-handle" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid #1A3A5C', cursor: 'grab', background: '#0D1F35', flexShrink: 0 }}>
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                    <circle cx="4" cy="3" r="1.2" fill="#4A6580"/>
+                    <circle cx="10" cy="3" r="1.2" fill="#4A6580"/>
+                    <circle cx="4" cy="7" r="1.2" fill="#4A6580"/>
+                    <circle cx="10" cy="7" r="1.2" fill="#4A6580"/>
+                    <circle cx="4" cy="11" r="1.2" fill="#4A6580"/>
+                    <circle cx="10" cy="11" r="1.2" fill="#4A6580"/>
+                  </svg>
+                  <span style={{ color: '#4A6580', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', flex: 1 }}>
+                    {PANEL_LABELS[id]}
+                  </span>
+                  <span style={{ color: '#243F5C', fontSize: 9 }}>↔ resize corner</span>
+                </div>
+                {/* Panel content */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
                 {id === 'projects' && (
                   <>
                     <SectionTitle>Projects</SectionTitle>
@@ -399,50 +417,11 @@ export default function ProjectsPage() {
                     </div>
                   </>
                 )}
-              </SortablePanel>
+                </div>
+              </div>
             ))}
-          </div>
-        </SortableContext>
-      </DndContext>
-    </div>
-  )
-}
-
-function SortablePanel({ id, span = 1, onResize, children }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
-  const sizeLabel = span === 1 ? '1 col' : span === 2 ? '2 col' : 'Full'
-  return (
-    <div
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : 1,
-        gridColumn: `span ${span}`,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 6,
-      }}
-    >
-      {/* Panel toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, userSelect: 'none' }}>
-        <div {...attributes} {...listeners} style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'grab' }}>
-          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-            <circle cx="4" cy="3" r="1.2" fill="#4A6580"/>
-            <circle cx="10" cy="3" r="1.2" fill="#4A6580"/>
-            <circle cx="4" cy="7" r="1.2" fill="#4A6580"/>
-            <circle cx="10" cy="7" r="1.2" fill="#4A6580"/>
-            <circle cx="4" cy="11" r="1.2" fill="#4A6580"/>
-            <circle cx="10" cy="11" r="1.2" fill="#4A6580"/>
-          </svg>
-          <span style={{ color: '#4A6580', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em' }}>drag</span>
-        </div>
-        <button
-          onClick={onResize}
-          style={{ background: 'transparent', border: '1px solid #243F5C', borderRadius: 4, padding: '2px 7px', color: '#4A6580', fontSize: 9, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }}
-        >{sizeLabel}</button>
+        </GridLayout>
       </div>
-      {children}
     </div>
   )
 }
