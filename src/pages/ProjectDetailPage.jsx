@@ -24,6 +24,7 @@ export default function ProjectDetailPage() {
   const [clients, setClients]         = useState([])
   const [publishing, setPublishing]   = useState(false)
   const [exportingCsv, setExportingCsv] = useState(false)
+  const [doorSearch, setDoorSearch]     = useState('')
 
   useEffect(() => {
     fetchData()
@@ -264,9 +265,22 @@ export default function ProjectDetailPage() {
         {/* Inspections */}
         <h2 style={styles.sectionTitle}>Inspections</h2>
 
+        {inspections.length > 0 && (
+          <input
+            style={{ background: '#162840', border: '1px solid #243F5C', borderRadius: 8, padding: '10px 16px', color: '#fff', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box', marginBottom: 16 }}
+            placeholder="Search by door name or barcode…"
+            value={doorSearch}
+            onChange={e => setDoorSearch(e.target.value)}
+          />
+        )}
+
         {loading ? <Spinner /> : inspections.length === 0 ? (
           <p style={{ color: GREY }}>No inspections recorded yet.</p>
-        ) : inspections.map(ins => (
+        ) : inspections.filter(ins =>
+            !doorSearch ||
+            ins.door_location?.toLowerCase().includes(doorSearch.toLowerCase()) ||
+            ins.door_asset_id?.toLowerCase().includes(doorSearch.toLowerCase())
+          ).map(ins => (
           <InspectionCard
             key={ins.id}
             inspection={ins}
