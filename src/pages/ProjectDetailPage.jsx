@@ -228,7 +228,7 @@ export default function ProjectDetailPage() {
                 {generatingPdf ? 'Generating…' : '⬇ PDF'}
               </button>
               <button style={{ ...styles.editBtn, background: '#1A3A5C', border: '1px solid #4CAF50', color: '#4CAF50', opacity: exportingCsv ? 0.6 : 1 }}
-                disabled={exportingCsv || inspections.length === 0 || !project?.client_id}
+                disabled={exportingCsv || inspections.length === 0}
                 onClick={exportCsv}>
                 {exportingCsv ? 'Exporting…' : '⬇ CSV'}
               </button>
