@@ -526,11 +526,11 @@ function ExportModal({ onClose }) {
       run: async () => {
         const { data } = await supabase
           .from('inspections')
-          .select('door_location, door_asset_id, doorset_assembly_type, fire_rating, inspection_passed, engineer_name, created_at, recommended_action, remedial_works_completed, projects(name, client_name)')
+          .select('door_location, door_asset_id, doorset_assembly_type, fire_rating, inspection_passed, engineer_name, created_at, recommended_action, remedial_works_completed, projects(name, client_name, address, postcode)')
           .order('created_at', { ascending: false })
         downloadCsv('inspections.csv',
-          ['Door Location','Door ID','Assembly Type','Fire Rating','Result','Inspector','Date','Project','Client','Recommended Action','Remedial Works'],
-          (data || []).map(i => [i.door_location, i.door_asset_id, i.doorset_assembly_type, i.fire_rating, i.inspection_passed, i.engineer_name, new Date(i.created_at).toLocaleDateString('en-GB'), i.projects?.name, i.projects?.client_name, i.recommended_action, i.remedial_works_completed])
+          ['Door Location','Door ID','Assembly Type','Fire Rating','Result','Inspector','Date','Project','Client','Address','Postcode','Recommended Action','Remedial Works'],
+          (data || []).map(i => [i.door_location, i.door_asset_id, i.doorset_assembly_type, i.fire_rating, i.inspection_passed, i.engineer_name, new Date(i.created_at).toLocaleDateString('en-GB'), i.projects?.name, i.projects?.client_name, i.projects?.address, i.projects?.postcode, i.recommended_action, i.remedial_works_completed])
         )
       },
     },
