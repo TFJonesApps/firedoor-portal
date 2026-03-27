@@ -51,6 +51,7 @@ export default function ProjectsPage() {
           </div>
           <div style={styles.headerRight}>
             <span style={styles.userEmail}>{user?.email}</span>
+            <button style={styles.signOutBtn} onClick={() => navigate('/users')}>Users</button>
             <button style={styles.signOutBtn} onClick={signOut}>Sign Out</button>
           </div>
         </div>

@@ -7,15 +7,29 @@ import ProjectDetailPage from './pages/ProjectDetailPage'
 import ClientLoginPage from './pages/ClientLoginPage'
 import ClientScanPage from './pages/ClientScanPage'
 import DoorResultPage from './pages/DoorResultPage'
+import UsersPage from './pages/UsersPage'
 
 export default function App() {
   const [session, setSession] = useState(undefined) // undefined = loading
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+      if (data.session) upsertEmail(data.session.user)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s)
+      if (s) upsertEmail(s.user)
+    })
     return () => subscription.unsubscribe()
   }, [])
+
+  async function upsertEmail(user) {
+    await supabase.from('user_profiles').upsert(
+      { id: user.id, email: user.email },
+      { onConflict: 'id', ignoreDuplicates: false }
+    )
+  }
 
   if (session === undefined) {
     return (
@@ -32,6 +46,7 @@ export default function App() {
         <Route path="/login"       element={!session ? <LoginPage />       : <Navigate to="/" />} />
         <Route path="/"            element={session  ? <ProjectsPage />    : <Navigate to="/login" />} />
         <Route path="/project/:id" element={session  ? <ProjectDetailPage /> : <Navigate to="/login" />} />
+        <Route path="/users"       element={session  ? <UsersPage />        : <Navigate to="/login" />} />
 
         {/* Client routes — /client/login is the client entry point */}
         <Route path="/client/login"         element={!session ? <ClientLoginPage /> : <Navigate to="/client/scan" />} />
