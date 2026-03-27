@@ -538,23 +538,43 @@ function ExportModal({ onClose }) {
     {
       id: 'inspections',
       title: 'All Inspections',
-      desc: 'Every door — location, ID, type, fire rating, result, inspector, date, action, remedial status, project, client, address',
+      desc: 'Complete record — every field captured during inspection including gaps, hardware, seals, remedials, and photos',
       icon: '🚪',
       run: async () => {
         const { data } = await supabase
           .from('inspections')
-          .select('door_location, door_asset_id, doorset_assembly_type, fire_rating, inspection_passed, engineer_name, created_at, recommended_action, remedial_works_completed, remedial_actioned, remedial_actioned_at, remedial_actioned_by, remedial_action_note, projects(name, client_name, address, postcode)')
+          .select('*, projects(name, client_name, address, postcode)')
           .order('created_at', { ascending: false })
-        downloadCsv('inspections.csv',
-          ['Door Location','Door ID','Assembly Type','Fire Rating','Result','Inspector','Inspection Date','Project','Client','Address','Postcode','Recommended Action','Remedial Works','Remedial Actioned','Actioned Date','Actioned By','Action Note'],
+        downloadCsv('inspections_full.csv',
+          [
+            'Project','Client','Address','Postcode',
+            'Inspection Date','Inspector','Result',
+            'Door Location','Door ID',
+            'Survey Type','Assembly Type','Configuration','Fire Rating','Fire Door ID Type',
+            'Leaf Sizes (mm)','Add-ons',
+            'Glazing OK','Structure Intact','Door/Frame Condition',
+            '3mm Gap Tolerance','Gap Hinge Side','Gap Lock Side','Gap Head','Gap Threshold (mm)','Threshold Within Tolerance',
+            'Leaf Flush to Rebates','Self-Closing Device','Hinges Acceptable',
+            'Essential Hardware','Correct Signage','Intumescent Seals','Fire Stopping',
+            'Recommended Action','Remedial Works','Repair Actions','Replacement Reason',
+            'Remedial Actioned','Actioned Date','Actioned By','Action Note',
+            'Photo Outside','Photo Inside','Photo 1','Photo 2','Photo 3','Photo 4','Photo 5','Photo 6',
+          ],
           (data || []).map(i => [
-            i.door_location, i.door_asset_id, i.doorset_assembly_type, i.fire_rating,
-            i.inspection_passed, i.engineer_name, new Date(i.created_at).toLocaleDateString('en-GB'),
             i.projects?.name, i.projects?.client_name, i.projects?.address, i.projects?.postcode,
-            i.recommended_action, i.remedial_works_completed,
+            new Date(i.created_at).toLocaleDateString('en-GB'), i.engineer_name, i.inspection_passed,
+            i.door_location, i.door_asset_id,
+            i.survey_type, i.doorset_assembly_type, i.doorset_configuration, i.fire_rating, i.fire_door_id_type,
+            i.leaf_sizes_mm, i.additional_addons,
+            i.glazing_free_from_damage, i.surrounding_structure_intact, i.condition_door_leaf_frame,
+            i.gap_3mm_tolerance, i.gap_hinge_side, i.gap_lock_side, i.gap_head, i.gap_threshold_mm, i.threshold_gap_within_tolerance,
+            i.leaf_flush_to_rebates, i.self_closing_device, i.hinges_condition_acceptable,
+            i.essential_hardware_acceptable, i.correct_signage_present, i.intumescent_seals_acceptable, i.fire_stopping_acceptable,
+            i.recommended_action, i.remedial_works_completed, i.recommended_repair_actions, i.replacement_reason,
             i.remedial_actioned ? 'Yes' : 'No',
             i.remedial_actioned_at ? new Date(i.remedial_actioned_at).toLocaleDateString('en-GB') : '',
             i.remedial_actioned_by, i.remedial_action_note,
+            i.photo_outside_url, i.photo_inside_url, i.photo1_url, i.photo2_url, i.photo3_url, i.photo4_url, i.photo5_url, i.photo6_url,
           ])
         )
       },
