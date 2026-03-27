@@ -61,7 +61,7 @@ export default function ClientScanPage() {
     <div style={s.page}>
       {/* Header */}
       <div style={s.header}>
-        <img src="/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png"
+        <img src="/NEW - TF Jones - Enhancing Building Safety Logo Transparent - White.png"
           alt="TF Jones" style={s.logo} />
         <button style={s.signOut} onClick={signOut}>Sign Out</button>
       </div>

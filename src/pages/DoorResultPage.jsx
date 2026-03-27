@@ -59,7 +59,7 @@ export default function DoorResultPage() {
       {/* Header */}
       <div style={s.header}>
         <img
-          src="/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png"
+          src="/NEW - TF Jones - Enhancing Building Safety Logo Transparent - White.png"
           alt="TF Jones"
           style={s.logo}
         />

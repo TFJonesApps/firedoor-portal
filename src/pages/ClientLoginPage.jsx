@@ -34,7 +34,7 @@ export default function ClientLoginPage() {
   return (
     <div style={s.page}>
       <div style={s.card}>
-        <img src="/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png"
+        <img src="/NEW - TF Jones - Enhancing Building Safety Logo Transparent - White.png"
           alt="TF Jones" style={s.logo} />
 
         <h1 style={s.title}>Door Inspection Portal</h1>
