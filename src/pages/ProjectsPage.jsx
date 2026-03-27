@@ -508,78 +508,114 @@ function ExportModal({ onClose }) {
     {
       id: 'projects',
       title: 'All Projects',
-      desc: 'Project name, address, client, inspector, created date',
+      desc: 'Name, address, client, inspector, door count, pass rate, created date, notes',
       icon: '🏢',
       run: async () => {
-        const { data } = await supabase.from('projects').select('name, address, postcode, client_name, engineer_name, created_at, notes').order('created_at', { ascending: false })
+        const { data: projects } = await supabase
+          .from('projects')
+          .select('id, name, address, postcode, client_name, engineer_name, created_at, notes')
+          .order('created_at', { ascending: false })
+        const { data: inspections } = await supabase
+          .from('inspections')
+          .select('project_id, inspection_passed')
+        const statsMap = {}
+        for (const i of (inspections || [])) {
+          if (!statsMap[i.project_id]) statsMap[i.project_id] = { total: 0, pass: 0 }
+          statsMap[i.project_id].total++
+          if (i.inspection_passed === 'Pass') statsMap[i.project_id].pass++
+        }
         downloadCsv('projects.csv',
-          ['Project Name','Address','Postcode','Client','Inspector','Created','Notes'],
-          (data || []).map(p => [p.name, p.address, p.postcode, p.client_name, p.engineer_name, new Date(p.created_at).toLocaleDateString('en-GB'), p.notes])
+          ['Project Name','Address','Postcode','Client','Inspector','Created','Total Doors','Pass','Fail','Pass Rate %','Notes'],
+          (projects || []).map(p => {
+            const s = statsMap[p.id] || { total: 0, pass: 0 }
+            const fail = s.total - s.pass
+            const rate = s.total ? Math.round((s.pass / s.total) * 100) : ''
+            return [p.name, p.address, p.postcode, p.client_name, p.engineer_name, new Date(p.created_at).toLocaleDateString('en-GB'), s.total, s.pass, fail, rate, p.notes]
+          })
         )
       },
     },
     {
       id: 'inspections',
       title: 'All Inspections',
-      desc: 'Every door inspection — location, result, inspector, date, recommended action',
+      desc: 'Every door — location, ID, type, fire rating, result, inspector, date, action, remedial status, project, client, address',
       icon: '🚪',
       run: async () => {
         const { data } = await supabase
           .from('inspections')
-          .select('door_location, door_asset_id, doorset_assembly_type, fire_rating, inspection_passed, engineer_name, created_at, recommended_action, remedial_works_completed, projects(name, client_name, address, postcode)')
+          .select('door_location, door_asset_id, doorset_assembly_type, fire_rating, inspection_passed, engineer_name, created_at, recommended_action, remedial_works_completed, remedial_actioned, remedial_actioned_at, remedial_actioned_by, remedial_action_note, projects(name, client_name, address, postcode)')
           .order('created_at', { ascending: false })
         downloadCsv('inspections.csv',
-          ['Door Location','Door ID','Assembly Type','Fire Rating','Result','Inspector','Date','Project','Client','Address','Postcode','Recommended Action','Remedial Works'],
-          (data || []).map(i => [i.door_location, i.door_asset_id, i.doorset_assembly_type, i.fire_rating, i.inspection_passed, i.engineer_name, new Date(i.created_at).toLocaleDateString('en-GB'), i.projects?.name, i.projects?.client_name, i.projects?.address, i.projects?.postcode, i.recommended_action, i.remedial_works_completed])
+          ['Door Location','Door ID','Assembly Type','Fire Rating','Result','Inspector','Inspection Date','Project','Client','Address','Postcode','Recommended Action','Remedial Works','Remedial Actioned','Actioned Date','Actioned By','Action Note'],
+          (data || []).map(i => [
+            i.door_location, i.door_asset_id, i.doorset_assembly_type, i.fire_rating,
+            i.inspection_passed, i.engineer_name, new Date(i.created_at).toLocaleDateString('en-GB'),
+            i.projects?.name, i.projects?.client_name, i.projects?.address, i.projects?.postcode,
+            i.recommended_action, i.remedial_works_completed,
+            i.remedial_actioned ? 'Yes' : 'No',
+            i.remedial_actioned_at ? new Date(i.remedial_actioned_at).toLocaleDateString('en-GB') : '',
+            i.remedial_actioned_by, i.remedial_action_note,
+          ])
         )
       },
     },
     {
       id: 'remedials',
       title: 'Remedials Outstanding',
-      desc: 'Failed doors with repair actions that have not yet been actioned',
+      desc: 'Failed doors not yet actioned — door, project, client, address, inspector, date, action required',
       icon: '🔧',
       run: async () => {
         const { data } = await supabase
           .from('inspections')
-          .select('door_location, door_asset_id, inspection_passed, recommended_action, remedial_works_completed, remedial_actioned, engineer_name, created_at, projects(name, address, postcode, client_name)')
+          .select('door_location, door_asset_id, doorset_assembly_type, fire_rating, recommended_action, remedial_works_completed, engineer_name, created_at, projects(name, address, postcode, client_name)')
           .eq('inspection_passed', 'Fail')
           .eq('remedial_actioned', false)
           .order('created_at', { ascending: false })
         downloadCsv('remedials_outstanding.csv',
-          ['Door Location','Door ID','Project','Client','Address','Postcode','Inspector','Inspection Date','Recommended Action','Remedial Works'],
-          (data || []).map(i => [i.door_location, i.door_asset_id, i.projects?.name, i.projects?.client_name, i.projects?.address, i.projects?.postcode, i.engineer_name, new Date(i.created_at).toLocaleDateString('en-GB'), i.recommended_action, i.remedial_works_completed])
+          ['Door Location','Door ID','Assembly Type','Fire Rating','Project','Client','Address','Postcode','Inspector','Inspection Date','Recommended Action','Remedial Works'],
+          (data || []).map(i => [
+            i.door_location, i.door_asset_id, i.doorset_assembly_type, i.fire_rating,
+            i.projects?.name, i.projects?.client_name, i.projects?.address, i.projects?.postcode,
+            i.engineer_name, new Date(i.created_at).toLocaleDateString('en-GB'),
+            i.recommended_action, i.remedial_works_completed,
+          ])
         )
       },
     },
     {
       id: 'actioned',
       title: 'Actioned Remedials',
-      desc: 'Remedials that have been marked as completed — who, when, and notes',
+      desc: 'Completed remedials — original action, who actioned it, when, note, project, client, address',
       icon: '✅',
       run: async () => {
         const { data } = await supabase
           .from('inspections')
-          .select('door_location, door_asset_id, recommended_action, remedial_actioned_at, remedial_actioned_by, remedial_action_note, created_at, projects(name, client_name)')
+          .select('door_location, door_asset_id, doorset_assembly_type, fire_rating, recommended_action, remedial_works_completed, engineer_name, created_at, remedial_actioned_at, remedial_actioned_by, remedial_action_note, projects(name, client_name, address, postcode)')
           .eq('remedial_actioned', true)
           .order('remedial_actioned_at', { ascending: false })
         downloadCsv('actioned_remedials.csv',
-          ['Door Location','Door ID','Project','Client','Original Action','Actioned Date','Actioned By','Note','Inspection Date'],
-          (data || []).map(i => [i.door_location, i.door_asset_id, i.projects?.name, i.projects?.client_name, i.recommended_action, i.remedial_actioned_at ? new Date(i.remedial_actioned_at).toLocaleDateString('en-GB') : '', i.remedial_actioned_by, i.remedial_action_note, new Date(i.created_at).toLocaleDateString('en-GB')])
+          ['Door Location','Door ID','Assembly Type','Fire Rating','Project','Client','Address','Postcode','Inspector','Inspection Date','Recommended Action','Remedial Works','Actioned Date','Actioned By','Action Note'],
+          (data || []).map(i => [
+            i.door_location, i.door_asset_id, i.doorset_assembly_type, i.fire_rating,
+            i.projects?.name, i.projects?.client_name, i.projects?.address, i.projects?.postcode,
+            i.engineer_name, new Date(i.created_at).toLocaleDateString('en-GB'),
+            i.recommended_action, i.remedial_works_completed,
+            i.remedial_actioned_at ? new Date(i.remedial_actioned_at).toLocaleDateString('en-GB') : '',
+            i.remedial_actioned_by, i.remedial_action_note,
+          ])
         )
       },
     },
     {
       id: 'reinspection',
       title: 'Reinspection Schedule',
-      desc: 'All doors with their next due date, status, and days remaining',
+      desc: 'All doors with due date, status, days remaining, type, last result, inspector, project, client, address',
       icon: '📅',
       run: async () => {
         const { data } = await supabase
           .from('inspections')
-          .select('door_location, door_asset_id, doorset_assembly_type, inspection_passed, created_at, engineer_name, projects(name, client_name)')
+          .select('door_location, door_asset_id, doorset_assembly_type, fire_rating, inspection_passed, created_at, engineer_name, projects(name, client_name, address, postcode)')
           .order('created_at', { ascending: false })
-        // Dedupe to latest per door
         const seen = new Map()
         for (const ins of (data || [])) {
           if (!seen.has(ins.door_asset_id)) seen.set(ins.door_asset_id, ins)
@@ -589,20 +625,19 @@ function ExportModal({ onClose }) {
           return [
             ins.door_location, ins.door_asset_id,
             doorCategory(ins.doorset_assembly_type) === 'flat' ? 'Flat Entrance' : 'Communal',
-            ins.inspection_passed, ins.engineer_name,
+            ins.fire_rating, ins.inspection_passed, ins.engineer_name,
             new Date(ins.created_at).toLocaleDateString('en-GB'),
             due.toLocaleDateString('en-GB'),
             status === 'overdue' ? `Overdue by ${Math.abs(diff)} days` : `${diff} days`,
-            status,
-            ins.projects?.name, ins.projects?.client_name,
+            status.charAt(0).toUpperCase() + status.slice(1),
+            ins.projects?.name, ins.projects?.client_name, ins.projects?.address, ins.projects?.postcode,
           ]
         }).sort((a, b) => {
-          // sort overdue first, then by days
           const statusOrder = { overdue: 0, soon: 1, ok: 2 }
-          return (statusOrder[a[8]] - statusOrder[b[8]]) || a[6].localeCompare(b[6])
+          return (statusOrder[a[9].toLowerCase()] - statusOrder[b[9].toLowerCase()]) || a[7].localeCompare(b[7])
         })
         downloadCsv('reinspection_schedule.csv',
-          ['Door Location','Door ID','Type','Last Result','Inspector','Last Inspected','Next Due','Days Remaining','Status','Project','Client'],
+          ['Door Location','Door ID','Type','Fire Rating','Last Result','Inspector','Last Inspected','Next Due','Days Remaining','Status','Project','Client','Address','Postcode'],
           rows
         )
       },
