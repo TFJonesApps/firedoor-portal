@@ -9,23 +9,28 @@ const PANEL_LABELS = {
 }
 
 const DEFAULT_LAYOUT = [
-  { i: 'projects',     x: 0, y: 0,  w: 8, h: 12, minW: 2, minH: 3 },
-  { i: 'recent',       x: 8, y: 0,  w: 4, h: 12, minW: 2, minH: 3 },
-  { i: 'activity',     x: 0, y: 12, w: 4, h: 8,  minW: 2, minH: 3 },
-  { i: 'remedials',    x: 4, y: 12, w: 4, h: 8,  minW: 2, minH: 3 },
-  { i: 'reinspection', x: 8, y: 12, w: 4, h: 10, minW: 2, minH: 3 },
-  { i: 'workload',     x: 0, y: 20, w: 4, h: 6,  minW: 2, minH: 3 },
+  { i: 'projects',     x: 0, y: 0,  w: 8, h: 12, minW: 2, minH: 2 },
+  { i: 'recent',       x: 8, y: 0,  w: 4, h: 12, minW: 2, minH: 2 },
+  { i: 'activity',     x: 0, y: 12, w: 4, h: 8,  minW: 2, minH: 2 },
+  { i: 'remedials',    x: 4, y: 12, w: 4, h: 8,  minW: 2, minH: 2 },
+  { i: 'reinspection', x: 8, y: 12, w: 4, h: 10, minW: 2, minH: 2 },
+  { i: 'workload',     x: 0, y: 20, w: 4, h: 6,  minW: 2, minH: 2 },
 ]
+
+const LAYOUT_KEY = 'dashboardLayout3'
 
 function loadLayout() {
   try {
-    const saved = localStorage.getItem('dashboardLayout2')
+    const saved = localStorage.getItem(LAYOUT_KEY)
     if (saved) {
       const parsed = JSON.parse(saved)
-      // merge in any new panels not in saved layout
-      const ids = parsed.map(p => p.i)
+      // Always enforce minW/minH from DEFAULT_LAYOUT so old saved values never block resizing
+      const defaults = Object.fromEntries(DEFAULT_LAYOUT.map(p => [p.i, p]))
+      const merged = parsed.map(p => ({ ...p, minW: defaults[p.i]?.minW ?? 2, minH: defaults[p.i]?.minH ?? 2 }))
+      // Add any new panels not in saved layout
+      const ids = merged.map(p => p.i)
       const missing = DEFAULT_LAYOUT.filter(p => !ids.includes(p.i))
-      return [...parsed, ...missing]
+      return [...merged, ...missing]
     }
   } catch {}
   return DEFAULT_LAYOUT
@@ -80,7 +85,7 @@ export default function ProjectsPage() {
 
   function handleLayoutChange(newLayout) {
     setLayout(newLayout)
-    localStorage.setItem('dashboardLayout2', JSON.stringify(newLayout))
+    localStorage.setItem(LAYOUT_KEY, JSON.stringify(newLayout))
   }
 
   useEffect(() => {
@@ -220,7 +225,7 @@ export default function ProjectsPage() {
           <div style={s.headerRight}>
             <span style={s.userEmail}>{user?.email}</span>
             <button style={s.btn} onClick={() => navigate('/users')}>Users</button>
-            <button style={s.btn} onClick={() => { localStorage.removeItem('dashboardLayout2'); setLayout(DEFAULT_LAYOUT) }}>Reset Layout</button>
+            <button style={s.btn} onClick={() => { localStorage.removeItem(LAYOUT_KEY); setLayout(DEFAULT_LAYOUT) }}>Reset Layout</button>
             <button style={s.btn} onClick={() => supabase.auth.signOut()}>Sign Out</button>
           </div>
         </div>
