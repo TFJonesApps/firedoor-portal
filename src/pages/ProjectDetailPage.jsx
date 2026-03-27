@@ -102,15 +102,37 @@ export default function ProjectDetailPage() {
       )
       if (remedials.length === 0) { alert('No remedial jobs to export for this project.'); setExportingCsv(false); return }
 
-      const headers = ['Property Ref','Address','Postcode','Job Description','Alpha 1','Alpha 2','Alpha 3','Alpha 4','Alpha 5']
+      // Fetch client alpha codes
+      let alphas = { alpha_client: '', alpha_branch: '', alpha_contract: '', alpha_contractor: 'TFJ', alpha_depot: 'HQ', alpha_priority: 'TARGET' }
+      if (project.client_id) {
+        const { data: clientData } = await supabase.from('clients').select('alpha_client,alpha_branch,alpha_contract,alpha_contractor,alpha_depot,alpha_priority').eq('id', project.client_id).single()
+        if (clientData) alphas = clientData
+      }
+
+      const headers = [
+        'Client_Alpha','Branch_Alpha','Contract_Alpha','Contractor_Alpha','Depot_Alpha','Priority_Alpha',
+        'Property Ref','Address','Postcode','Job Number','Received Date','Required Date',
+        'Job Description','SOR Code','Qty','SOR Description','Rate','Costcode','Orderno',
+        'Asset_Contact','Asset_Contact_Phone','Asset_Contact_Notes','Asset_Contact_Email',
+      ]
       const rows = remedials.map(i => [
-        '',
-        project.address || '',
-        project.postcode || '',
+        alphas.alpha_client    || '',
+        alphas.alpha_branch    || '',
+        alphas.alpha_contract  || '',
+        alphas.alpha_contractor || 'TFJ',
+        alphas.alpha_depot     || 'HQ',
+        alphas.alpha_priority  || 'TARGET',
+        '',                    // Property Ref — fill manually
+        project.address        || '',
+        project.postcode       || '',
+        '',                    // Job Number — blank
+        '',                    // Received Date
+        '',                    // Required Date
         `Fire Door Repair - ${i.door_location || i.door_asset_id || 'Unknown'}: ${i.remedial_works_completed || i.recommended_action || ''}`,
-        '', '', '', '', '',
+        '', '', '', '', '', '', '', '', '', '',
       ])
-      const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+
+      const csv  = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
       const blob = new Blob([csv], { type: 'text/csv' })
       const url  = URL.createObjectURL(blob)
       const a    = Object.assign(document.createElement('a'), { href: url, download: `${project.name || 'export'}_jobs.csv` })
