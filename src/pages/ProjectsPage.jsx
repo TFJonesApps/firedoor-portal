@@ -86,6 +86,7 @@ export default function ProjectsPage() {
 
   const overdue = filteredLatest.filter(i => dueInfo(i).status === 'overdue').sort((a,b) => dueInfo(a).diff - dueInfo(b).diff)
   const soon    = filteredLatest.filter(i => dueInfo(i).status === 'soon').sort((a,b)    => dueInfo(a).diff - dueInfo(b).diff)
+  const allDueSorted = [...filteredLatest].sort((a,b) => dueInfo(a).diff - dueInfo(b).diff)
 
   // Remedials outstanding — latest inspection is Fail with Repair action
   const remedialsOutstanding = useMemo(() => filteredLatest.filter(i =>
@@ -317,12 +318,9 @@ export default function ProjectsPage() {
         <div style={s.col3}>
           <SectionTitle>Reinspection Due</SectionTitle>
           <div style={s.panel}>
-            {overdue.length === 0 && soon.length === 0
-              ? <p style={{ color: '#4CAF50', fontSize: 13 }}>✓ All doors up to date.</p>
-              : <>
-                  {overdue.map(ins => <DueRow key={ins.id} ins={ins} navigate={navigate} />)}
-                  {soon.map(ins    => <DueRow key={ins.id} ins={ins} navigate={navigate} />)}
-                </>
+            {allDueSorted.length === 0
+              ? <p style={{ color: '#4CAF50', fontSize: 13 }}>✓ No doors yet.</p>
+              : allDueSorted.slice(0, 25).map(ins => <DueRow key={ins.id} ins={ins} navigate={navigate} />)
             }
           </div>
 
@@ -358,10 +356,10 @@ function SectionTitle({ children, style }) {
 
 function DueRow({ ins, navigate }) {
   const { due, diff, status } = dueInfo(ins)
-  const color = status === 'overdue' ? '#F44336' : '#FF9800'
+  const color = status === 'overdue' ? '#F44336' : status === 'soon' ? '#FF9800' : '#4CAF50'
   const label = status === 'overdue'
     ? `Overdue by ${Math.abs(diff)} day${Math.abs(diff) !== 1 ? 's' : ''}`
-    : `Due in ${diff} day${diff !== 1 ? 's' : ''}`
+    : `Due in ${diff} day${diff !== 1 ? 's' : ''} · ${due.toLocaleDateString('en-GB')}`
   return (
     <div style={{ ...s.feedRow, borderLeft: `3px solid ${color}`, paddingLeft: 10, cursor: 'pointer' }}
       onClick={() => ins.project_id && navigate(`/project/${ins.project_id}`)}>
