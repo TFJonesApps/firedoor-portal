@@ -10,18 +10,26 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 
 const DEFAULT_PANEL_ORDER = ['projects', 'activity', 'recent', 'remedials', 'reinspection', 'workload']
+const DEFAULT_PANEL_SIZES = { projects: 1, activity: 1, recent: 1, remedials: 1, reinspection: 1, workload: 1 }
 
 function loadPanelOrder() {
   try {
     const saved = localStorage.getItem('dashboardPanelOrder')
     if (saved) {
       const parsed = JSON.parse(saved)
-      // ensure all panels present (in case new ones added)
       const missing = DEFAULT_PANEL_ORDER.filter(p => !parsed.includes(p))
       return [...parsed, ...missing]
     }
   } catch {}
   return DEFAULT_PANEL_ORDER
+}
+
+function loadPanelSizes() {
+  try {
+    const saved = localStorage.getItem('dashboardPanelSizes')
+    if (saved) return { ...DEFAULT_PANEL_SIZES, ...JSON.parse(saved) }
+  } catch {}
+  return { ...DEFAULT_PANEL_SIZES }
 }
 
 const FLAT_DAYS     = 365
@@ -62,6 +70,15 @@ export default function ProjectsPage() {
   const [loading,          setLoading]          = useState(true)
   const [user,             setUser]             = useState(null)
   const [panelOrder,       setPanelOrder]       = useState(loadPanelOrder)
+  const [panelSizes,       setPanelSizes]       = useState(loadPanelSizes)
+
+  function cycleSize(id) {
+    setPanelSizes(prev => {
+      const next = { ...prev, [id]: prev[id] === 1 ? 2 : prev[id] === 2 ? 3 : 1 }
+      localStorage.setItem('dashboardPanelSizes', JSON.stringify(next))
+      return next
+    })
+  }
   const navigate = useNavigate()
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
@@ -255,7 +272,7 @@ export default function ProjectsPage() {
         <SortableContext items={panelOrder} strategy={rectSortingStrategy}>
           <div style={s.body}>
             {panelOrder.map(id => (
-              <SortablePanel key={id} id={id}>
+              <SortablePanel key={id} id={id} span={panelSizes[id]} onResize={() => cycleSize(id)}>
                 {id === 'projects' && (
                   <>
                     <SectionTitle>Projects</SectionTitle>
@@ -391,8 +408,9 @@ export default function ProjectsPage() {
   )
 }
 
-function SortablePanel({ id, children }) {
+function SortablePanel({ id, span = 1, onResize, children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const sizeLabel = span === 1 ? '1 col' : span === 2 ? '2 col' : 'Full'
   return (
     <div
       ref={setNodeRef}
@@ -400,26 +418,29 @@ function SortablePanel({ id, children }) {
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.5 : 1,
+        gridColumn: `span ${span}`,
         display: 'flex',
         flexDirection: 'column',
-        gap: 8,
+        gap: 6,
       }}
     >
-      {/* Drag handle */}
-      <div
-        {...attributes}
-        {...listeners}
-        style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'grab', userSelect: 'none', marginBottom: 2 }}
-      >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <circle cx="4" cy="3" r="1.2" fill="#4A6580"/>
-          <circle cx="10" cy="3" r="1.2" fill="#4A6580"/>
-          <circle cx="4" cy="7" r="1.2" fill="#4A6580"/>
-          <circle cx="10" cy="7" r="1.2" fill="#4A6580"/>
-          <circle cx="4" cy="11" r="1.2" fill="#4A6580"/>
-          <circle cx="10" cy="11" r="1.2" fill="#4A6580"/>
-        </svg>
-        <span style={{ color: '#4A6580', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>drag to reorder</span>
+      {/* Panel toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, userSelect: 'none' }}>
+        <div {...attributes} {...listeners} style={{ display: 'flex', alignItems: 'center', gap: 5, cursor: 'grab' }}>
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+            <circle cx="4" cy="3" r="1.2" fill="#4A6580"/>
+            <circle cx="10" cy="3" r="1.2" fill="#4A6580"/>
+            <circle cx="4" cy="7" r="1.2" fill="#4A6580"/>
+            <circle cx="10" cy="7" r="1.2" fill="#4A6580"/>
+            <circle cx="4" cy="11" r="1.2" fill="#4A6580"/>
+            <circle cx="10" cy="11" r="1.2" fill="#4A6580"/>
+          </svg>
+          <span style={{ color: '#4A6580', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em' }}>drag</span>
+        </div>
+        <button
+          onClick={onResize}
+          style={{ background: 'transparent', border: '1px solid #243F5C', borderRadius: 4, padding: '2px 7px', color: '#4A6580', fontSize: 9, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+        >{sizeLabel}</button>
       </div>
       {children}
     </div>
@@ -489,7 +510,7 @@ const s = {
   search:       { flex: 1, background: '#162840', border: '1px solid #243F5C', borderRadius: 8, padding: '10px 16px', color: '#fff', fontSize: 14, outline: 'none' },
   select:       { background: '#162840', border: '1px solid #243F5C', borderRadius: 8, padding: '10px 14px', color: '#fff', fontSize: 14, outline: 'none', minWidth: 160 },
 
-  body:         { maxWidth: 1600, margin: '0 auto', padding: '0 32px 40px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, alignItems: 'flex-start' },
+  body:         { maxWidth: 1600, margin: '0 auto', padding: '0 32px 40px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, alignItems: 'flex-start' },
 
   tableWrap:    { overflowX: 'auto', borderRadius: 12, border: '1px solid #162840', marginBottom: 4 },
   table:        { width: '100%', borderCollapse: 'collapse' },
