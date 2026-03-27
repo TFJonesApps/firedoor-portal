@@ -194,7 +194,7 @@ const s = {
   page:        { minHeight: '100vh', background: '#0D1F35', display: 'flex', flexDirection: 'column' },
   header:      { background: '#162840', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1A3A5C' },
   logo:        { height: 32, objectFit: 'contain' },
-  backBtn:     { background: 'transparent', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, padding: '6px 14px', color: '#fff', fontSize: 13 },
+  backBtn:     { background: 'transparent', border: '2px solid #fff', borderRadius: 10, padding: '12px 24px', color: '#fff', fontSize: 16, fontWeight: 600, minWidth: 150 },
   body:        { flex: 1, padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480, width: '100%', margin: '0 auto' },
   centred:     { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 12, textAlign: 'center', paddingTop: 40 },
   iconBox:     { fontSize: 64, lineHeight: 1 },
