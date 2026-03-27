@@ -9,12 +9,12 @@ const PANEL_LABELS = {
 }
 
 const DEFAULT_LAYOUT = [
-  { i: 'projects',     x: 0, y: 0,  w: 8, h: 12, minW: 4, minH: 6 },
-  { i: 'recent',       x: 8, y: 0,  w: 4, h: 12, minW: 3, minH: 6 },
-  { i: 'activity',     x: 0, y: 12, w: 4, h: 8,  minW: 3, minH: 5 },
-  { i: 'remedials',    x: 4, y: 12, w: 4, h: 8,  minW: 3, minH: 5 },
-  { i: 'reinspection', x: 8, y: 12, w: 4, h: 10, minW: 3, minH: 6 },
-  { i: 'workload',     x: 0, y: 20, w: 4, h: 6,  minW: 3, minH: 4 },
+  { i: 'projects',     x: 0, y: 0,  w: 8, h: 12, minW: 2, minH: 3 },
+  { i: 'recent',       x: 8, y: 0,  w: 4, h: 12, minW: 2, minH: 3 },
+  { i: 'activity',     x: 0, y: 12, w: 4, h: 8,  minW: 2, minH: 3 },
+  { i: 'remedials',    x: 4, y: 12, w: 4, h: 8,  minW: 2, minH: 3 },
+  { i: 'reinspection', x: 8, y: 12, w: 4, h: 10, minW: 2, minH: 3 },
+  { i: 'workload',     x: 0, y: 20, w: 4, h: 6,  minW: 2, minH: 3 },
 ]
 
 function loadLayout() {
