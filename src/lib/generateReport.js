@@ -31,7 +31,7 @@ export async function generateSingleInspectionReport(project, inspection) {
   doc.save(`${loc} - ${dateStr}.pdf`)
 }
 
-// ─── Entry point ──────────────────────────────────────────────────────────────
+// ─── Entry point (Project Report) ─────────────────────────────────────────────
 export async function generateProjectReport(project, inspections) {
   const doc  = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const logo       = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null)
@@ -62,15 +62,36 @@ export async function generateProjectReport(project, inspections) {
   doc.save(filename)
 }
 
+// ─── Full History Report (NEW) ────────────────────────────────────────────────
+/**
+ * Combines all existing individual reports for a specific door into one PDF.
+ */
+export async function generateFullHistoryReport(assetId, inspections) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null)
+  
+  // Sort latest first
+  const sorted = [...inspections].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  
+  // Use the project context from the most recent inspection
+  const project = sorted[0].projects || { name: 'Door History', client_name: '' }
+  const totalPages = sorted.length
+
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0) doc.addPage()
+    
+    // Reuse your exact same inspectionPage logic
+    await inspectionPage(doc, logo, project, sorted[i], i + 1, totalPages)
+  }
+
+  doc.save(`History_${assetId}.pdf`)
+}
+
 // ─── Page header (shared) ─────────────────────────────────────────────────────
-// Logo sits on WHITE, so the black-background PNG renders cleanly.
-// A thin navy rule + yellow stripe sits below to anchor the header visually.
 function drawPageHeader(doc, logo, rightTitle, rightSub, showLogo = true) {
-  // White header zone
   doc.setFillColor(...WHITE)
   doc.rect(0, 0, W, 24, 'F')
 
-  // TFJ wordmark — only on cover page
   if (showLogo) {
     if (logo) {
       const h = 16
@@ -84,7 +105,6 @@ function drawPageHeader(doc, logo, rightTitle, rightSub, showLogo = true) {
     }
   }
 
-  // Right side text
   if (rightTitle) {
     doc.setFontSize(7.5)
     doc.setFont('helvetica', 'normal')
@@ -97,12 +117,7 @@ function drawPageHeader(doc, logo, rightTitle, rightSub, showLogo = true) {
     doc.setTextColor(...DARK)
     doc.text(rightSub, W - MR, 19, { align: 'right' })
   }
-  // Return header bottom Y
   return 25.5
-
-  // Thin navy rule
-  doc.setFillColor(...NAVY)
-  doc.rect(0, 24, W, 1.5, 'F')
 }
 
 // ─── Footer ───────────────────────────────────────────────────────────────────
@@ -155,7 +170,6 @@ function drawSummaryRow(doc, ins, y, rowIndex) {
   doc.text(loc, c1, y + 5)
   doc.text(ins.fire_rating || '—', c2, y + 5)
 
-  // Solid PASS/FAIL badge
   const bw = 16
   const bx = c3 - bw
   doc.setFillColor(...(isPassed ? GREEN : RED))
@@ -167,7 +181,6 @@ function drawSummaryRow(doc, ins, y, rowIndex) {
 }
 
 // ─── Cover page ───────────────────────────────────────────────────────────────
-// Returns number of pages used (1 + overflow pages)
 async function coverPage(doc, logo, clientLogo, project, inspections) {
   const passed   = inspections.filter(i => i.inspection_passed === 'Pass').length
   const failed   = inspections.filter(i => i.inspection_passed === 'Fail').length
@@ -175,38 +188,23 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
   const passRate = total > 0 ? Math.round((passed / total) * 100) : 0
   const dateStr  = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
 
-  // We need totalPages at the end — do a first pass to count, then we'll stamp footers last.
-  // For now we stamp footer as we go, with placeholders updated at the end via a re-render.
-  // Simpler: just count how many summary pages we need first.
-
   const FOOTER_CLEAR = 14
   const AVAIL_COVER  = H - FOOTER_CLEAR
-
-  // How much vertical space does the static cover content take?
-  // Header: 27mm, hero: ~52mm, stats: 28mm, info card: ~58mm, section label: 12mm, table header: 8mm
-  // Rough: static content ends around y = 27 + 52 + 28 + 58 + 12 + 8 = 185mm  → rows start at ~185
-  // Each row = 7mm → floor((AVAIL_COVER - 185) / 7) rows fit on cover
   const STATIC_BOTTOM = 185
   const rowsOnCover   = Math.max(0, Math.floor((AVAIL_COVER - STATIC_BOTTOM) / SUM_ROW_H))
   const overflow      = Math.max(0, total - rowsOnCover)
   const overflowPages = overflow > 0 ? Math.ceil(overflow / Math.floor((AVAIL_COVER - 38) / SUM_ROW_H)) : 0
   const grandTotal    = 1 + overflowPages + inspections.length
 
-  // ── Draw cover ──────────────────────────────────────────────────────────────
   doc.setFillColor(...WHITE)
   doc.rect(0, 0, W, H, 'F')
 
   drawPageHeader(doc, logo, 'FIRE DOOR INSPECTION REPORT', dateStr)
 
   let y = 34
-
-  // ── Right column: PREPARED FOR + client logo ─────────────────────────────
-  // All logos fit into a fixed 55×22mm box (scaled to fit, centred in box)
   const LOGO_BOX_W = 55
   const LOGO_BOX_H = 22
   const logoBoxX   = W - MR - LOGO_BOX_W
-
-  // Right column starts at same level as project name (y + 10)
   const ry = y + 10
 
   doc.setFontSize(7)
@@ -225,9 +223,7 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
     doc.addImage(clientLogo.dataUrl, 'PNG', logoBoxX, ry + yOffset, dw, dh)
   }
 
-  // ── Left column: project name + address ──────────────────────────────────
-  const leftW = logoBoxX - ML - 8   // stop well before the right column
-
+  const leftW = logoBoxX - ML - 8
   doc.setFontSize(22)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...NAVY)
@@ -236,7 +232,6 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
 
   let nameBottom = y + 10 + nameLines.length * 9
 
-  // Address and postcode — tight stacking, larger text
   if (project.address) {
     doc.setFontSize(11)
     doc.setFont('helvetica', 'normal')
@@ -252,12 +247,9 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
     nameBottom += 6
   }
 
-  // Advance y past whichever column is taller
   y = Math.max(nameBottom + 6, y + 57)
-
   y += 4
 
-  // ── Stat strip ──────────────────────────────────────────────────────────────
   const statW = (CW - 9) / 4
   const stats = [
     { label: 'Total Doors', value: total,          color: NAVY  },
@@ -269,16 +261,13 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
     const bx = ML + i * (statW + 3)
     doc.setFillColor(...LGREY)
     doc.roundedRect(bx, y, statW, 17, 1.5, 1.5, 'F')
-    // Top colour bar
     doc.setFillColor(...s.color)
     doc.roundedRect(bx, y, statW, 2.5, 1.5, 1.5, 'F')
     doc.rect(bx, y + 1.2, statW, 1.3, 'F')
-    // Value
     doc.setFontSize(14)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...s.color)
     doc.text(String(s.value), bx + statW / 2, y + 10.5, { align: 'center' })
-    // Label
     doc.setFontSize(6)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(...SLATE)
@@ -286,13 +275,11 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
   })
   y += 22
 
-  // ── Project info card ────────────────────────────────────────────────────────
   doc.setFontSize(9)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(...NAVY)
   doc.text('Project Information', ML, y)
   y += 4
-
   doc.setFillColor(...MGREY)
   doc.rect(ML, y, CW, 0.4, 'F')
   y += 0.4
@@ -309,78 +296,41 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
     const ry = y + i * rowH
     doc.setFillColor(...(i % 2 === 0 ? LGREY : WHITE))
     doc.rect(ML, ry, CW, rowH, 'F')
-
-    doc.setFontSize(7.5)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...SLATE)
+    doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE)
     doc.text(label, ML + 3, ry + 5.8)
-
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(...DARK)
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(...DARK)
     const val = doc.splitTextToSize(value, CW * 0.55)[0]
     doc.text(val, ML + CW - 3, ry + 5.8, { align: 'right' })
   })
   y += infoRows.length * 8.5
-
-  doc.setFillColor(...MGREY)
-  doc.rect(ML, y, CW, 0.4, 'F')
+  doc.setFillColor(...MGREY); doc.rect(ML, y, CW, 0.4, 'F')
   y += 8
 
-  // ── Inspection Summary section label ─────────────────────────────────────────
-  doc.setFontSize(9)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(...NAVY)
-  doc.text('Inspection Summary', ML, y)
-  y += 4
+  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY)
+  doc.text('Inspection Summary', ML, y); y += 4
 
-  // ── Draw summary table rows — paginating as needed ───────────────────────────
-  let rowIndex    = 0
-  let currentPage = 1
-  let pageNums    = [1]  // track pages used for summary
-
-  // First: draw header on cover page
+  let rowIndex = 0; let currentPage = 1
   y = drawSummaryHeader(doc, y)
 
   for (let i = 0; i < inspections.length; i++) {
-    // Check if this row fits above the footer
     if (y + SUM_ROW_H > H - FOOTER_CLEAR - 2) {
-      // Stamp footer on current page
       drawFooter(doc, currentPage, grandTotal)
-
-      // New page
-      doc.addPage()
-      currentPage++
-      pageNums.push(currentPage)
-
-      doc.setFillColor(...WHITE)
-      doc.rect(0, 0, W, H, 'F')
+      doc.addPage(); currentPage++
+      doc.setFillColor(...WHITE); doc.rect(0, 0, W, H, 'F')
       drawPageHeader(doc, logo, `${project.name}`, 'INSPECTION SUMMARY (CONTINUED)')
-
-      y = 34
-      doc.setFontSize(9)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(...NAVY)
-      doc.text('Inspection Summary (continued)', ML, y)
-      y += 4
+      y = 34; doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY)
+      doc.text('Inspection Summary (continued)', ML, y); y += 4
       y = drawSummaryHeader(doc, y)
     }
-
     drawSummaryRow(doc, inspections[i], y, rowIndex)
-    y += SUM_ROW_H
-    rowIndex++
+    y += SUM_ROW_H; rowIndex++
   }
-
-  // Bottom rule
-  doc.setFillColor(...MGREY)
-  doc.rect(ML, y, CW, 0.4, 'F')
-
-  // Stamp footer on last summary page
+  doc.setFillColor(...MGREY); doc.rect(ML, y, CW, 0.4, 'F')
   drawFooter(doc, currentPage, grandTotal)
-
-  return currentPage  // number of cover/summary pages used
+  return currentPage
 }
 
-// ─── Inspection page ──────────────────────────────────────────────────────────
+// ─── Inspection page (shared logic) ──────────────────────────────────────────
 async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
   const passed    = ins.inspection_passed === 'Pass'
   const passColor = passed ? GREEN : RED
@@ -391,47 +341,29 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
 
   drawPageHeader(doc, logo, project.name, project.client_name || '', false)
 
-  // ── Door heading card ────────────────────────────────────────────────────────
   const headY = 30
   const headH = 20
+  doc.setFillColor(...LGREY); doc.rect(ML, headY, CW, headH, 'F')
+  doc.setFillColor(...passColor); doc.rect(ML, headY, 3.5, headH, 'F')
 
-  doc.setFillColor(...LGREY)
-  doc.rect(ML, headY, CW, headH, 'F')
-
-  // Left colour strip (pass/fail)
-  doc.setFillColor(...passColor)
-  doc.rect(ML, headY, 3.5, headH, 'F')
-
-  // Location
-  doc.setFontSize(13)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(...NAVY)
+  doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY)
   const locLines = doc.splitTextToSize(ins.door_location || 'Unknown Location', CW - 52)
   doc.text(locLines, ML + 7, headY + 9)
 
-  // PASS/FAIL badge
-  const badgeW = 24
-  const badgeX = ML + CW - badgeW
-  doc.setFillColor(...passColor)
-  doc.roundedRect(badgeX, headY + 3.5, badgeW, 11, 2, 2, 'F')
-  doc.setFontSize(10)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(255, 255, 255)
+  const badgeW = 24; const badgeX = ML + CW - badgeW
+  doc.setFillColor(...passColor); doc.roundedRect(badgeX, headY + 3.5, badgeW, 11, 2, 2, 'F')
+  doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255)
   doc.text(passLabel, badgeX + badgeW / 2, headY + 11, { align: 'center' })
 
-  // Meta
   const meta = [
     ins.door_asset_id && `Asset ID: ${ins.door_asset_id}`,
     ins.fire_rating,
     new Date(ins.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
     ins.engineer_name && `Inspector: ${ins.engineer_name}`,
   ].filter(Boolean).join('   ·   ')
-  doc.setFontSize(7)
-  doc.setFont('helvetica', 'normal')
-  doc.setTextColor(...SLATE)
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE)
   doc.text(meta, ML + 7, headY + headH - 4)
 
-  // ── Two-column field sections ─────────────────────────────────────────────
   const sections = [
     {
       title: 'Door Details',
@@ -482,206 +414,111 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
     },
   ]
 
-  const GAP    = 4
-  const colW   = (CW - GAP) / 2
-  const leftX  = ML
-  const rightX = ML + colW + GAP
-  const ROW_H  = 6
-  const SEC_H  = 6.5
-
-  const FOOTER_H     = 13
-  const PHOTO_BLOCK  = 44  // header(7) + photo(32) + label(5)
-  const FOOTER_CLEAR = FOOTER_H + 4
-  const maxFieldY    = H - FOOTER_CLEAR - PHOTO_BLOCK - 4
-
-  let leftY  = headY + headH + 5
-  let rightY = headY + headH + 5
+  const GAP = 4; const colW = (CW - GAP) / 2
+  const ROW_H = 6; const SEC_H = 6.5; const FOOTER_CLEAR = 17
+  const PHOTO_BLOCK = 44; const maxFieldY = H - FOOTER_CLEAR - PHOTO_BLOCK - 4
+  let leftY = headY + headH + 5; let rightY = headY + headH + 5
 
   sections.forEach(section => {
     const active = section.fields.filter(([, v]) => v)
     if (active.length === 0) return
-    // Estimate height: questions may wrap to 2 lines
     const sh = SEC_H + active.reduce((sum, [label]) => {
-      const lines = Math.ceil(label.length / 38)  // rough chars per line at 60% of colW
+      const lines = Math.ceil(label.length / 38)
       return sum + Math.max(ROW_H, lines * 4.5 + 2.5)
     }, 0) + 3
 
     let startX, col
-    if (leftY <= rightY && leftY + sh <= maxFieldY) {
-      col = 'left'; startX = leftX
-    } else if (rightY + sh <= maxFieldY) {
-      col = 'right'; startX = rightX
-    } else {
-      col = leftY <= rightY ? 'left' : 'right'
-      startX = col === 'left' ? leftX : rightX
-    }
+    if (leftY <= rightY && leftY + sh <= maxFieldY) { col = 'left'; startX = ML }
+    else if (rightY + sh <= maxFieldY) { col = 'right'; startX = ML + colW + GAP }
+    else { col = leftY <= rightY ? 'left' : 'right'; startX = col === 'left' ? ML : ML + colW + GAP }
     let cy = col === 'left' ? leftY : rightY
 
-    // Section heading — navy bar with yellow text
-    doc.setFillColor(...NAVY)
-    doc.rect(startX, cy, colW, SEC_H, 'F')
-    doc.setFontSize(6.5)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...YELLOW)
-    doc.text(section.title.toUpperCase(), startX + 2.5, cy + 4.5)
-    cy += SEC_H
+    doc.setFillColor(...NAVY); doc.rect(startX, cy, colW, SEC_H, 'F')
+    doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...YELLOW)
+    doc.text(section.title.toUpperCase(), startX + 2.5, cy + 4.5); cy += SEC_H
 
     active.forEach(([label, value], i) => {
-      doc.setFontSize(6.5)
-      doc.setFont('helvetica', 'normal')
-
-      // Question wraps over ~60% of col width; answer right-aligned in ~38%
       const labelLines = doc.splitTextToSize(label, colW * 0.60)
       const rh = Math.max(ROW_H, labelLines.length * 4.5 + 2.5)
-
-      doc.setFillColor(...(i % 2 === 0 ? LGREY : WHITE))
-      doc.rect(startX, cy, colW, rh, 'F')
-
-      doc.setTextColor(...SLATE)
+      doc.setFillColor(...(i % 2 === 0 ? LGREY : WHITE)); doc.rect(startX, cy, colW, rh, 'F')
+      doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE)
       doc.text(labelLines, startX + 2.5, cy + 4)
-
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(...DARK)
-      const maxVW = colW * 0.36
-      const val = doc.splitTextToSize(String(value), maxVW)[0]
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK)
+      const val = doc.splitTextToSize(String(value), colW * 0.36)[0]
       doc.text(val, startX + colW - 2.5, cy + 4, { align: 'right' })
       cy += rh
     })
-
-    cy += 3
-    if (col === 'left') leftY = cy
-    else rightY = cy
+    if (col === 'left') leftY = cy + 3; else rightY = cy + 3
   })
 
-  const contentBottom = Math.max(leftY, rightY) + 3
-
-  // ── Photos ─────────────────────────────────────────────────────────────────
   const photos = [
-    ['Outside', ins.photo_outside_url],
-    ['Inside',  ins.photo_inside_url],
-    ['Photo 1', ins.photo1_url],
-    ['Photo 2', ins.photo2_url],
-    ['Photo 3', ins.photo3_url],
-    ['Photo 4', ins.photo4_url],
-    ['Photo 5', ins.photo5_url],
-    ['Photo 6', ins.photo6_url],
+    ['Outside', ins.photo_outside_url], ['Inside', ins.photo_inside_url],
+    ['Photo 1', ins.photo1_url], ['Photo 2', ins.photo2_url],
+    ['Photo 3', ins.photo3_url], ['Photo 4', ins.photo4_url],
+    ['Photo 5', ins.photo5_url], ['Photo 6', ins.photo6_url],
   ].filter(([, u]) => u)
 
   if (photos.length > 0) {
-    const PGAP   = 3
-    const MAX_PH = 5
-    const PHOTO_H = 32
-    const PW     = (CW - PGAP * (MAX_PH - 1)) / MAX_PH
-    const count  = Math.min(photos.length, MAX_PH)
-
-    const barY = Math.max(contentBottom, H - FOOTER_CLEAR - PHOTO_H - 14)
-    const phY  = barY + 9
-
-    // Section bar
-    doc.setFillColor(...LGREY)
-    doc.rect(ML, barY, CW, 7, 'F')
-    doc.setFillColor(...NAVY)
-    doc.rect(ML, barY, 3, 7, 'F')
-    doc.setFontSize(6.5)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(...NAVY)
+    const barY = Math.max(Math.max(leftY, rightY), H - FOOTER_CLEAR - 32 - 14)
+    doc.setFillColor(...LGREY); doc.rect(ML, barY, CW, 7, 'F')
+    doc.setFillColor(...NAVY); doc.rect(ML, barY, 3, 7, 'F')
+    doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY)
     doc.text('INSPECTION PHOTOGRAPHS', ML + 5.5, barY + 4.8)
-
-    for (let i = 0; i < count; i++) {
-      const [label, url] = photos[i]
-      const px = ML + i * (PW + PGAP)
+    const PW = (CW - (3 * 4)) / 5
+    for (let i = 0; i < Math.min(photos.length, 5); i++) {
       try {
-        const img = await loadImage(url)
-        doc.addImage(img, 'JPEG', px, phY, PW, PHOTO_H)
-        doc.setDrawColor(...MGREY)
-        doc.setLineWidth(0.3)
-        doc.rect(px, phY, PW, PHOTO_H)
-        doc.setFontSize(6)
-        doc.setFont('helvetica', 'normal')
-        doc.setTextColor(...SLATE)
-        doc.text(label, px + PW / 2, phY + PHOTO_H + 4, { align: 'center' })
+        const img = await loadImage(photos[i][1])
+        doc.addImage(img, 'JPEG', ML + i * (PW + 3), barY + 9, PW, 32)
       } catch (_) {}
     }
   }
-
   drawFooter(doc, pageNum, totalPages)
 }
 
 // ─── Image loaders ────────────────────────────────────────────────────────────
-
-// For photos — JPEG compression
 async function loadImage(url) {
   return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
+    const img = new Image(); img.crossOrigin = 'anonymous'
     img.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width  = img.width
-      canvas.height = img.height
+      const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height
       canvas.getContext('2d').drawImage(img, 0, 0)
       resolve(canvas.toDataURL('image/jpeg', 0.85))
     }
-    img.onerror = reject
-    img.src = url + (url.includes('?') ? '&' : '?') + `_=${Date.now()}`
+    img.onerror = reject; img.src = url + (url.includes('?') ? '&' : '?') + `_=${Date.now()}`
   })
 }
 
-// For logos with transparency — PNG, auto-trims whitespace so the content fills the box
-// Returns { dataUrl, width, height }
 async function loadLogoImage(url) {
   return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
+    const img = new Image(); img.crossOrigin = 'anonymous'
     img.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width  = img.width
-      canvas.height = img.height
+      const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height
       canvas.getContext('2d').drawImage(img, 0, 0)
-
-      // Auto-trim white / transparent padding
       const trimmed = trimWhitespace(canvas)
       resolve({ dataUrl: trimmed.toDataURL('image/png'), width: trimmed.width, height: trimmed.height })
     }
-    img.onerror = reject
-    img.src = url + (url.includes('?') ? '&' : '?') + `_=${Date.now()}`
+    img.onerror = reject; img.src = url + (url.includes('?') ? '&' : '?') + `_=${Date.now()}`
   })
 }
 
-// Crop away white/transparent border pixels so the logo fills its display box
 function trimWhitespace(canvas) {
-  const ctx  = canvas.getContext('2d')
-  const w    = canvas.width
-  const h    = canvas.height
+  const ctx = canvas.getContext('2d'); const w = canvas.width; const h = canvas.height
   const data = ctx.getImageData(0, 0, w, h).data
-
   let top = h, bottom = 0, left = w, right = 0
-
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      const i = (y * w + x) * 4
-      const a = data[i + 3]
-      const r = data[i], g = data[i + 1], b = data[i + 2]
-      const isBlank = a < 15 || (r > 238 && g > 238 && b > 238)
-      if (!isBlank) {
-        if (y < top)    top    = y
-        if (y > bottom) bottom = y
-        if (x < left)   left   = x
-        if (x > right)  right  = x
+      const i = (y * w + x) * 4; const a = data[i + 3]
+      const r = data[i], g = data[i+1], b = data[i+2]
+      if (a >= 15 && !(r > 238 && g > 238 && b > 238)) {
+        if (y < top) top = y; if (y > bottom) bottom = y
+        if (x < left) left = x; if (x > right) right = x
       }
     }
   }
-
-  if (top > bottom || left > right) return canvas  // nothing to trim
-
-  const pad = 6  // small breathing room
-  const cx = Math.max(0, left - pad)
-  const cy = Math.max(0, top  - pad)
-  const cw = Math.min(w, right  - left + pad * 2 + 1)
-  const ch = Math.min(h, bottom - top  + pad * 2 + 1)
-
-  const out = document.createElement('canvas')
-  out.width  = cw
-  out.height = ch
+  if (top > bottom || left > right) return canvas
+  const pad = 6; const cx = Math.max(0, left - pad); const cy = Math.max(0, top - pad)
+  const cw = Math.min(w, right - left + pad * 2 + 1); const ch = Math.min(h, bottom - top + pad * 2 + 1)
+  const out = document.createElement('canvas'); out.width = cw; out.height = ch
   out.getContext('2d').drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch)
   return out
 }
