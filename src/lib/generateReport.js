@@ -17,17 +17,25 @@ const ML = 16
 const MR = 16 
 const CW = W - ML - MR 
 
-// ─── Entry point: Project Report ────────────────────────────────────────────── 
-export async function generateProjectReport(project, inspections) { 
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) 
-  const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null) 
-  
-  // Robust check for client logo path
-  let clientLogoPath = project.client_logo;
+// Client name → logo filename fallback (for projects created without client_logo)
+const CLIENT_LOGOS = {
+  'TF Jones':                     'tfj_logo.png',
+  'Wigan Council':                'Wigan_Council.png',
+  'Peaks & Plains Housing Trust': 'peaks and plains logo.png',
+  'Lancaster City Council':       'lancastercc.png',
+}
+
+// ─── Entry point: Project Report ──────────────────────────────────────────────
+export async function generateProjectReport(project, inspections) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null)
+
+  // Resolve client logo — use project field first, fall back to known map
+  let clientLogoPath = project.client_logo || CLIENT_LOGOS[project.client_name] || '';
   if (clientLogoPath && !clientLogoPath.startsWith('http') && !clientLogoPath.startsWith('/')) {
     clientLogoPath = `/${clientLogoPath}`;
   }
-  const clientLogo = clientLogoPath ? await loadLogoImage(clientLogoPath).catch(() => null) : null 
+  const clientLogo = clientLogoPath ? await loadLogoImage(clientLogoPath).catch(() => null) : null
 
   const summaryPages = await coverPage(doc, logo, clientLogo, project, inspections) 
   const grandTotal = summaryPages + inspections.length 
