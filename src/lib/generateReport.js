@@ -21,12 +21,15 @@ const CW = W - ML - MR
 export async function generateProjectReport(project, inspections) { 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) 
   const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null) 
-  const clientLogo = project.client_logo ? await loadLogoImage(`/${project.client_logo}`).catch(() => null) : null 
-
-  // Cover + summary pages
-  const summaryPages = await coverPage(doc, logo, clientLogo, project, inspections) 
   
-  // Inspection detail pages 
+  // Robust check for client logo path
+  let clientLogoPath = project.client_logo;
+  if (clientLogoPath && !clientLogoPath.startsWith('http') && !clientLogoPath.startsWith('/')) {
+    clientLogoPath = `/${clientLogoPath}`;
+  }
+  const clientLogo = clientLogoPath ? await loadLogoImage(clientLogoPath).catch(() => null) : null 
+
+  const summaryPages = await coverPage(doc, logo, clientLogo, project, inspections) 
   const grandTotal = summaryPages + inspections.length 
 
   for (let i = 0; i < inspections.length; i++) { 
@@ -59,14 +62,12 @@ export async function generateFullHistoryReport(assetId, inspections) {
   const project = latest.projects || { name: 'Asset History Log', client_name: '' }
   
   const grandTotal = sorted.length + 1
-
   await historyCoverPage(doc, logo, project, latest, assetId, 1, grandTotal)
 
   for (let i = 0; i < sorted.length; i++) {
     doc.addPage()
     await inspectionPage(doc, logo, project, sorted[i], i + 2, grandTotal)
   }
-
   doc.save(`History_${assetId}.pdf`)
 }
 
@@ -120,7 +121,7 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
 
   y = Math.max(nameBottom + 6, y + 57) + 4 
 
-  // Stat strip
+  // Stats strip
   const statW = (CW - 9) / 4 
   const stats = [ 
     { label: 'Total Doors', value: total, color: NAVY }, 
@@ -179,7 +180,6 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
   } 
   doc.setFillColor(...MGREY); doc.rect(ML, y, CW, 0.4, 'F') 
   drawFooter(doc, currentPage, grandTotal) 
-
   return currentPage 
 }
 
@@ -224,7 +224,7 @@ async function historyCoverPage(doc, logo, project, latest, assetId, pageNum, to
   drawFooter(doc, pageNum, totalPages)
 }
 
-// ─── Inspection Detail Page (Full Questions Restored) ───────────────────────── 
+// ─── Inspection Detail Page ─────────────────────────────────────────────────── 
 async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) { 
   const passed = ins.inspection_passed === 'Pass' 
   const passColor = passed ? GREEN : RED 
@@ -291,7 +291,6 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
   for (const section of sections) { 
     const active = section.fields.filter(([, v]) => v) 
     if (active.length === 0) continue 
-    const sh = 6.5 + active.reduce((sum, [l]) => sum + Math.max(6, Math.ceil(l.length / 38) * 4.5 + 2.5), 0) + 3 
     let startX = leftY <= rightY ? ML : ML + colW + 4 
     let cy = leftY <= rightY ? leftY : rightY 
     doc.setFillColor(...NAVY); doc.rect(startX, cy, colW, 6.5, 'F') 
@@ -316,7 +315,7 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
   drawFooter(doc, pageNum, totalPages) 
 } 
 
-// ─── Helpers (Shared) ───────────────────────────────────────────────────────── 
+// ─── Helpers ────────────────────────────────────────────────────────────────── 
 function drawPageHeader(doc, logo, rightTitle, rightSub, showLogo = true) { 
   doc.setFillColor(...WHITE); doc.rect(0, 0, W, 24, 'F') 
   if (showLogo && logo) { 
@@ -333,7 +332,6 @@ function drawFooter(doc, pageNum, totalPages) {
   doc.setFont('helvetica', 'bold'); doc.setTextColor(...WHITE); doc.text(`Page ${pageNum} of ${totalPages}`, W - MR, H - 4.5, { align: 'right' }) 
 } 
 
-// Summary Table Helpers
 const SUM_ROW_H = 7; const SUM_HEAD_H = 8 
 function drawSummaryHeader(doc, y) { 
   doc.setFillColor(...NAVY); doc.rect(ML, y, CW, SUM_HEAD_H, 'F') 
@@ -357,7 +355,7 @@ function drawSummaryRow(doc, ins, y, rowIndex) {
   doc.text(ins.inspection_passed || '—', bx + bw / 2, y + 5, { align: 'center' }) 
 }
 
-// Image Loaders
+// ─── Image Loaders ──────────────────────────────────────────────────────────── 
 async function loadImage(url) { 
   return new Promise((resolve, reject) => { 
     const img = new Image(); img.crossOrigin = 'anonymous' 
@@ -372,13 +370,19 @@ async function loadImage(url) {
 
 async function loadLogoImage(url) { 
   return new Promise((resolve, reject) => { 
+    if (!url) return reject('No URL');
     const img = new Image(); img.crossOrigin = 'anonymous' 
     img.onload = () => { 
       const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height 
-      canvas.getContext('2d').drawImage(img, 0, 0); const trimmed = trimWhitespace(canvas) 
-      resolve({ dataUrl: trimmed.toDataURL('image/png'), width: trimmed.width, height: trimmed.height }) 
+      canvas.getContext('2d').drawImage(img, 0, 0) 
+      try {
+        const trimmed = trimWhitespace(canvas) 
+        resolve({ dataUrl: trimmed.toDataURL('image/png'), width: trimmed.width, height: trimmed.height }) 
+      } catch (e) {
+        resolve({ dataUrl: canvas.toDataURL('image/png'), width: img.width, height: img.height }) 
+      }
     } 
-    img.onerror = reject; img.src = url + (url.includes('?') ? '&' : '?') + `_=${Date.now()}` 
+    img.onerror = reject; img.src = url.startsWith('http') ? `${url}?t=${Date.now()}` : url; 
   }) 
 } 
 
