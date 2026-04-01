@@ -306,32 +306,45 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
 
   const photos = [['Outside', ins.photo_outside_url], ['Inside', ins.photo_inside_url], ['Photo 1', ins.photo1_url], ['Photo 2', ins.photo2_url], ['Photo 3', ins.photo3_url], ['Photo 4', ins.photo4_url], ['Photo 5', ins.photo5_url], ['Photo 6', ins.photo6_url]].filter(([, u]) => u)
   if (photos.length > 0) {
-    const PHOTO_COL_W = (CW - 4) / 2   // ~87mm per column
-    const PHOTO_H     = 65              // 65mm tall each
     const PHOTO_GAP   = 4
+    const PHOTO_COL_W = (CW - PHOTO_GAP) / 2   // 2 columns always
     const FOOTER_H    = 14
+    const HEADER_H    = 10                       // photo section header
+    const LABEL_H     = 5                        // label above each photo
+    const ROW_GAP     = 3
 
-    let py = Math.max(leftY, rightY) + 4  // start right after sections
+    const numRows     = Math.ceil(photos.length / 2)
+    let py            = Math.max(leftY, rightY) + 4
+    const available   = H - FOOTER_H - py - HEADER_H  // total vertical space left
+    const CELL_H      = Math.min(65, Math.max(25, (available - (numRows - 1) * ROW_GAP - numRows * LABEL_H) / numRows))
+    const ROW_H       = CELL_H + LABEL_H + ROW_GAP
+
     // Header bar
     doc.setFillColor(...LGREY); doc.rect(ML, py, CW, 7, 'F')
     doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY); doc.text('INSPECTION PHOTOGRAPHS', ML + 5.5, py + 4.8)
-    py += 10
+    py += HEADER_H
 
-    for (let i = 0; i < Math.min(photos.length, 6); i++) {
+    for (let i = 0; i < Math.min(photos.length, 8); i++) {
       const col = i % 2
-      if (col === 0 && py + PHOTO_H + 8 > H - FOOTER_H) {
-        // Not enough room — add a new page for remaining photos
-        drawFooter(doc, pageNum, totalPages)
-        doc.addPage(); pageNum++
-        doc.setFillColor(...WHITE); doc.rect(0, 0, W, H, 'F')
-        drawPageHeader(doc, logo, project.name, 'PHOTOGRAPHS (CONTINUED)', false)
-        py = 30
-      }
       const px = ML + col * (PHOTO_COL_W + PHOTO_GAP)
+      // Cell background
+      doc.setFillColor(...LGREY); doc.roundedRect(px, py, PHOTO_COL_W, CELL_H + LABEL_H, 1, 1, 'F')
       // Label
-      doc.setFontSize(6); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE); doc.text(photos[i][0], px, py - 1)
-      try { const img = await loadImage(photos[i][1]); doc.addImage(img, 'JPEG', px, py, PHOTO_COL_W, PHOTO_H) } catch (_) {}
-      if (col === 1 || i === photos.length - 1) py += PHOTO_H + 6
+      doc.setFontSize(6); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text(photos[i][0], px + 2, py + 4)
+      // Photo — fit inside cell maintaining aspect ratio
+      try {
+        const img = await loadImage(photos[i][1])
+        const imgEl = await getImageDimensions(img)
+        const maxW = PHOTO_COL_W - 2, maxH = CELL_H - 2
+        const ratio = imgEl.width / imgEl.height
+        let dw = maxW, dh = dw / ratio
+        if (dh > maxH) { dh = maxH; dw = dh * ratio }
+        const ox = px + (PHOTO_COL_W - dw) / 2
+        const oy = py + LABEL_H + (CELL_H - dh) / 2
+        doc.addImage(img, 'JPEG', ox, oy, dw, dh)
+      } catch (_) {}
+      // Advance row after right column or last photo
+      if (col === 1 || i === photos.length - 1) py += ROW_H
     }
   }
   drawFooter(doc, pageNum, totalPages) 
@@ -377,8 +390,17 @@ function drawSummaryRow(doc, ins, y, rowIndex) {
   doc.text(ins.inspection_passed || '—', bx + bw / 2, y + 5, { align: 'center' }) 
 }
 
-// ─── Image Loaders ──────────────────────────────────────────────────────────── 
-async function loadImage(url) { 
+// ─── Image helpers ────────────────────────────────────────────────────────────
+function getImageDimensions(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => resolve({ width: img.width, height: img.height })
+    img.onerror = () => resolve({ width: 4, height: 3 }) // fallback 4:3
+    img.src = dataUrl
+  })
+}
+
+async function loadImage(url) {
   return new Promise((resolve, reject) => { 
     const img = new Image(); img.crossOrigin = 'anonymous' 
     img.onload = () => { 
