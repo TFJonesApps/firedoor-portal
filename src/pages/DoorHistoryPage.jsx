@@ -25,29 +25,42 @@ export default function DoorHistoryPage() {
     supabase.from('clients').select('id, name').order('name').then(({ data }) => setClients(data || []))
   }, [])
 
-  async function search(id) {
-    const decoded = (id || searchInput).trim()
-    if (!decoded) return
-    setAssetId(decoded)
-    setSearchInput(decoded)
-    setLoading(true)
-    setSearched(true)
-    setExpanded(null)
+async function search(id) {
+  // Use the provided id OR the state, and trim it
+  const term = (id || searchInput || '').trim();
+  if (!term) return;
 
-    let query = supabase
-      .from('inspections')
-      .select('*, projects!inner(id, name, address, postcode, client_name, client_id, client_logo, engineer_name)')
-      .eq('door_asset_id', decoded)
-      .order('created_at', { ascending: false })
+  setAssetId(term);
+  setSearchInput(term);
+  setLoading(true);
+  setSearched(true);
+  setExpanded(null);
 
-    if (clientFilter) {
-      query = query.eq('projects.client_id', clientFilter)
-    }
+  // 1. Start the query
+  let query = supabase
+    .from('inspections')
+    .select('*, projects!inner(id, name, address, postcode, client_name, client_id, client_logo, engineer_name)')
+    // Use ilike for case-insensitive matching in case barcodes have letters
+    .ilike('door_asset_id', term) 
+    .order('created_at', { ascending: false });
 
-    const { data, error } = await query
-    setInspections(error ? [] : (data || []))
-    setLoading(false)
+  // 2. ONLY apply the client filter if one is actually selected
+  // Ensure we check for 'null', undefined, or empty string
+  if (clientFilter && clientFilter !== "") {
+    query = query.eq('projects.client_id', clientFilter);
   }
+
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error("Search Error:", error);
+    setInspections([]);
+  } else {
+    setInspections(data || []);
+  }
+  
+  setLoading(false);
+}
 
   useEffect(() => {
     if (searched && assetId) search(assetId)
