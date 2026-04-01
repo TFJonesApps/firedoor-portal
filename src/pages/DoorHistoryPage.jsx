@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { generateSingleInspectionReport } from '../lib/generateReport'
+import { generateSingleInspectionReport, generateFullHistoryReport } from '../lib/generateReport'
 
 const PASS = '#4CAF50'
 const FAIL = '#F44336'
@@ -18,6 +18,7 @@ export default function DoorHistoryPage() {
   const [clientFilter, setClientFilter] = useState('')
   const [expanded, setExpanded]       = useState(null)
   const [generating, setGenerating]   = useState(null)
+  const [generatingHistory, setGeneratingHistory] = useState(false)
   const [searched, setSearched]       = useState(false)
 
   useEffect(() => {
@@ -48,7 +49,6 @@ export default function DoorHistoryPage() {
     setLoading(false)
   }
 
-  // Re-search when client filter changes (if already searched)
   useEffect(() => {
     if (searched && assetId) search(assetId)
   }, [clientFilter])
@@ -63,13 +63,25 @@ export default function DoorHistoryPage() {
     setGenerating(null)
   }
 
+  // NEW: Function to generate the packaged history PDF
+  async function downloadFullHistory() {
+    if (inspections.length === 0) return
+    setGeneratingHistory(true)
+    try {
+      // Logic assumes your lib handles the array of inspections
+      await generateFullHistoryReport(assetId, inspections)
+    } catch (e) {
+      console.error('History PDF generation failed:', e)
+    }
+    setGeneratingHistory(false)
+  }
+
   const latest = inspections[0]
   const passCount = inspections.filter(i => i.inspection_passed === 'Pass').length
   const passRate  = inspections.length > 0 ? Math.round((passCount / inspections.length) * 100) : 0
 
   return (
     <div style={s.page}>
-      {/* Header */}
       <div style={s.header}>
         <div style={s.headerInner}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
@@ -87,7 +99,6 @@ export default function DoorHistoryPage() {
       </div>
 
       <div style={s.body}>
-        {/* Search + client filter */}
         <div style={s.searchBar}>
           <input
             style={s.searchInput}
@@ -107,7 +118,6 @@ export default function DoorHistoryPage() {
           <button style={s.searchBtn} onClick={() => search()}>Search</button>
         </div>
 
-        {/* Loading */}
         {loading && (
           <div style={s.centred}>
             <div style={s.spinner} />
@@ -115,19 +125,16 @@ export default function DoorHistoryPage() {
           </div>
         )}
 
-        {/* No results */}
         {!loading && searched && inspections.length === 0 && (
           <div style={s.centred}>
             <p style={{ color: '#8A9BAD', fontSize: 15 }}>No inspections found for "{assetId}"{clientFilter ? ' with the selected client' : ''}</p>
           </div>
         )}
 
-        {/* Results */}
         {!loading && inspections.length > 0 && (
           <>
-            {/* Door summary */}
             <div style={s.summaryCard}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'stretch' }}>
                 <div>
                   <p style={{ ...s.summaryLabel, marginTop: 0 }}>Door Asset ID</p>
                   <p style={s.summaryValue}>{assetId}</p>
@@ -150,20 +157,31 @@ export default function DoorHistoryPage() {
                     </>
                   )}
                 </div>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <div style={s.statBox}>
-                    <span style={{ fontSize: 28, fontWeight: 800, color: '#fff' }}>{inspections.length}</span>
-                    <span style={{ fontSize: 11, color: '#8A9BAD' }}>Inspections</span>
+
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={s.statBox}>
+                      <span style={{ fontSize: 28, fontWeight: 800, color: '#fff' }}>{inspections.length}</span>
+                      <span style={{ fontSize: 11, color: '#8A9BAD' }}>Inspections</span>
+                    </div>
+                    <div style={s.statBox}>
+                      <span style={{ fontSize: 28, fontWeight: 800, color: passRate >= 80 ? PASS : passRate >= 50 ? '#FF9800' : FAIL }}>{passRate}%</span>
+                      <span style={{ fontSize: 11, color: '#8A9BAD' }}>Pass Rate</span>
+                    </div>
                   </div>
-                  <div style={s.statBox}>
-                    <span style={{ fontSize: 28, fontWeight: 800, color: passRate >= 80 ? PASS : passRate >= 50 ? '#FF9800' : FAIL }}>{passRate}%</span>
-                    <span style={{ fontSize: 11, color: '#8A9BAD' }}>Pass Rate</span>
-                  </div>
+
+                  {/* History PDF Button placed right under the stats */}
+                  <button 
+                    style={{ ...s.historyBtn, opacity: generatingHistory ? 0.7 : 1 }} 
+                    onClick={downloadFullHistory}
+                    disabled={generatingHistory}
+                  >
+                    {generatingHistory ? 'Packaging...' : 'Download Full History PDF'}
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Timeline */}
             <div style={s.timeline}>
               {inspections.map((ins, i) => {
                 const passed = ins.inspection_passed === 'Pass'
@@ -172,13 +190,11 @@ export default function DoorHistoryPage() {
 
                 return (
                   <div key={ins.id} style={s.timelineItem}>
-                    {/* Timeline dot + line */}
                     <div style={s.timelineSide}>
                       <div style={{ ...s.dot, background: passed ? PASS : FAIL }} />
                       {i < inspections.length - 1 && <div style={s.line} />}
                     </div>
 
-                    {/* Card */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div
                         style={{ ...s.timelineCard, borderLeft: `3px solid ${passed ? PASS : FAIL}`, cursor: 'pointer' }}
@@ -202,7 +218,6 @@ export default function DoorHistoryPage() {
                           <span style={{ color: '#3A5570', fontSize: 18 }}>{isExpanded ? '−' : '+'}</span>
                         </div>
 
-                        {/* Expanded details */}
                         {isExpanded && (
                           <div style={{ marginTop: 12, borderTop: '1px solid #1A3A5C', paddingTop: 12 }}>
                             <DetailGrid ins={ins} />
@@ -321,6 +336,9 @@ const s = {
   summaryLabel:{ color: '#8A9BAD', fontSize: 11, margin: '10px 0 2px', textTransform: 'uppercase', letterSpacing: '0.05em' },
   summaryValue:{ color: '#fff', fontSize: 15, fontWeight: 600, margin: 0 },
   statBox:     { display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#0D1F35', borderRadius: 10, padding: '12px 16px', minWidth: 80 },
+
+  // Updated Button Style for the Summary Area
+  historyBtn:  { background: 'transparent', color: YELLOW, border: `1px solid ${YELLOW}`, borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' },
 
   timeline:     { display: 'flex', flexDirection: 'column', gap: 0 },
   timelineItem: { display: 'flex', gap: 16, minHeight: 80 },
