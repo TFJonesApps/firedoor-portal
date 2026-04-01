@@ -17,26 +17,16 @@ const ML = 16
 const MR = 16 
 const CW = W - ML - MR 
 
-// ─── Entry Point: Single Inspection ─────────────────────────────────────────── 
-export async function generateSingleInspectionReport(project, inspection) { 
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) 
-  const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null) 
-  await inspectionPage(doc, logo, project, inspection, 1, 1) 
-  const dateStr = new Date(inspection.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) 
-  const loc = (inspection.door_location || 'Door').replace(/[/\\?%*:|"<>]/g, '') 
-  doc.save(`${loc} - ${dateStr}.pdf`) 
-} 
-
-// ─── Entry Point: Project Report ────────────────────────────────────────────── 
+// ─── Entry point: Project Report ────────────────────────────────────────────── 
 export async function generateProjectReport(project, inspections) { 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) 
   const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null) 
   const clientLogo = project.client_logo ? await loadLogoImage(`/${project.client_logo}`).catch(() => null) : null 
 
-  let pageNum = 1 
+  // Cover + summary pages
   const summaryPages = await coverPage(doc, logo, clientLogo, project, inspections) 
-  pageNum += summaryPages 
-
+  
+  // Inspection detail pages 
   const grandTotal = summaryPages + inspections.length 
 
   for (let i = 0; i < inspections.length; i++) { 
@@ -49,7 +39,17 @@ export async function generateProjectReport(project, inspections) {
   doc.save(filename) 
 } 
 
-// ─── NEW Entry Point: Full History Report ───────────────────────────────────── 
+// ─── Entry point: Single Inspection Report ──────────────────────────────────── 
+export async function generateSingleInspectionReport(project, inspection) { 
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) 
+  const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null) 
+  await inspectionPage(doc, logo, project, inspection, 1, 1) 
+  const dateStr = new Date(inspection.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) 
+  const loc = (inspection.door_location || 'Door').replace(/[/\\?%*:|"<>]/g, '') 
+  doc.save(`${loc} - ${dateStr}.pdf`) 
+} 
+
+// ─── Entry point: Full History Report ───────────────────────────────────────── 
 export async function generateFullHistoryReport(assetId, inspections) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null)
@@ -60,10 +60,8 @@ export async function generateFullHistoryReport(assetId, inspections) {
   
   const grandTotal = sorted.length + 1
 
-  // 1. History Front Sheet
   await historyCoverPage(doc, logo, project, latest, assetId, 1, grandTotal)
 
-  // 2. Individual Inspection Pages (Restored with full questions)
   for (let i = 0; i < sorted.length; i++) {
     doc.addPage()
     await inspectionPage(doc, logo, project, sorted[i], i + 2, grandTotal)
@@ -72,7 +70,120 @@ export async function generateFullHistoryReport(assetId, inspections) {
   doc.save(`History_${assetId}.pdf`)
 }
 
-// ─── History Front Sheet (No Lead Engineer) ───────────────────────────────────
+// ─── Cover Page (Project Report) ───────────────────────────────────────────── 
+async function coverPage(doc, logo, clientLogo, project, inspections) { 
+  const passed = inspections.filter(i => i.inspection_passed === 'Pass').length 
+  const failed = inspections.filter(i => i.inspection_passed === 'Fail').length 
+  const total = inspections.length 
+  const passRate = total > 0 ? Math.round((passed / total) * 100) : 0 
+  const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) 
+
+  const FOOTER_CLEAR = 14 
+  const AVAIL_COVER = H - FOOTER_CLEAR 
+  const STATIC_BOTTOM = 185 
+  const rowsOnCover = Math.max(0, Math.floor((AVAIL_COVER - STATIC_BOTTOM) / SUM_ROW_H)) 
+  const overflow = Math.max(0, total - rowsOnCover) 
+  const overflowPages = overflow > 0 ? Math.ceil(overflow / Math.floor((AVAIL_COVER - 38) / SUM_ROW_H)) : 0 
+  const grandTotal = 1 + overflowPages + inspections.length 
+
+  doc.setFillColor(...WHITE); doc.rect(0, 0, W, H, 'F') 
+  drawPageHeader(doc, logo, 'FIRE DOOR INSPECTION REPORT', dateStr) 
+
+  let y = 34 
+  const LOGO_BOX_W = 55; const logoBoxX = W - MR - LOGO_BOX_W 
+  const ry = y + 10 
+
+  doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE); doc.text('PREPARED FOR', logoBoxX, ry) 
+
+  if (clientLogo) { 
+    const ratio = clientLogo.width / clientLogo.height 
+    const MAX_W = 55; const targetH = ratio < 1.5 ? 52 : 22 
+    let dh = targetH, dw = dh * ratio 
+    if (dw > MAX_W) { dw = MAX_W; dh = dw / ratio } 
+    doc.addImage(clientLogo.dataUrl, 'PNG', logoBoxX, ry + 5, dw, dh) 
+  } 
+
+  const leftW = logoBoxX - ML - 8 
+  doc.setFontSize(22); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY) 
+  const nameLines = doc.splitTextToSize(project.name || 'Untitled Project', leftW) 
+  doc.text(nameLines, ML, y + 10) 
+  let nameBottom = y + 10 + nameLines.length * 9 
+
+  if (project.address) { 
+    doc.setFontSize(11); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE) 
+    doc.text(project.address, ML, nameBottom + 3); nameBottom += 6 
+  }
+  if (project.postcode) {
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK)
+    doc.text(project.postcode, ML, nameBottom + 3); nameBottom += 6
+  }
+
+  y = Math.max(nameBottom + 6, y + 57) + 4 
+
+  // Stat strip
+  const statW = (CW - 9) / 4 
+  const stats = [ 
+    { label: 'Total Doors', value: total, color: NAVY }, 
+    { label: 'Passed', value: passed, color: GREEN }, 
+    { label: 'Failed', value: failed, color: RED }, 
+    { label: 'Pass Rate', value: `${passRate}%`, color: NAVY }, 
+  ] 
+  stats.forEach((s, i) => { 
+    const bx = ML + i * (statW + 3) 
+    doc.setFillColor(...LGREY); doc.roundedRect(bx, y, statW, 17, 1.5, 1.5, 'F') 
+    doc.setFillColor(...s.color); doc.roundedRect(bx, y, statW, 2.5, 1.5, 1.5, 'F') 
+    doc.rect(bx, y + 1.2, statW, 1.3, 'F') 
+    doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(...s.color) 
+    doc.text(String(s.value), bx + statW / 2, y + 10.5, { align: 'center' }) 
+    doc.setFontSize(6); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE) 
+    doc.text(s.label.toUpperCase(), bx + statW / 2, y + 14.5, { align: 'center' }) 
+  }) 
+  y += 22 
+
+  // Info card
+  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY); doc.text('Project Information', ML, y) 
+  y += 4; doc.setFillColor(...MGREY); doc.rect(ML, y, CW, 0.4, 'F'); y += 0.4 
+
+  const infoRows = [ 
+    ['Client', project.client_name || '—'], 
+    ['Fire Door Inspector', project.engineer_name || '—'], 
+    ['Address', [project.address, project.postcode].filter(Boolean).join(', ') || '—'], 
+    ['Report Date', dateStr], 
+    ['Total Inspections', String(total)], 
+  ] 
+  infoRows.forEach(([label, value], i) => { 
+    const rowH = 8.5; const ry = y + i * rowH 
+    doc.setFillColor(...(i % 2 === 0 ? LGREY : WHITE)); doc.rect(ML, ry, CW, rowH, 'F') 
+    doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text(label, ML + 3, ry + 5.8) 
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(...DARK) 
+    const val = doc.splitTextToSize(value, CW * 0.55)[0] 
+    doc.text(val, ML + CW - 3, ry + 5.8, { align: 'right' }) 
+  }) 
+  y += infoRows.length * 8.5 + 8 
+
+  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY); doc.text('Inspection Summary', ML, y) 
+  y += 4; y = drawSummaryHeader(doc, y) 
+
+  let rowIndex = 0; let currentPage = 1 
+  for (let i = 0; i < inspections.length; i++) { 
+    if (y + SUM_ROW_H > H - FOOTER_CLEAR - 2) { 
+      drawFooter(doc, currentPage, grandTotal) 
+      doc.addPage(); currentPage++ 
+      doc.setFillColor(...WHITE); doc.rect(0, 0, W, H, 'F') 
+      drawPageHeader(doc, logo, project.name, 'INSPECTION SUMMARY (CONTINUED)') 
+      y = 34; doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY); doc.text('Inspection Summary (continued)', ML, y) 
+      y += 4; y = drawSummaryHeader(doc, y) 
+    } 
+    drawSummaryRow(doc, inspections[i], y, rowIndex) 
+    y += SUM_ROW_H; rowIndex++ 
+  } 
+  doc.setFillColor(...MGREY); doc.rect(ML, y, CW, 0.4, 'F') 
+  drawFooter(doc, currentPage, grandTotal) 
+
+  return currentPage 
+}
+
+// ─── History Front Sheet (Door Asset History Log) ─────────────────────────────
 async function historyCoverPage(doc, logo, project, latest, assetId, pageNum, totalPages) {
   const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
   doc.setFillColor(...WHITE); doc.rect(0, 0, W, H, 'F')
@@ -113,7 +224,7 @@ async function historyCoverPage(doc, logo, project, latest, assetId, pageNum, to
   drawFooter(doc, pageNum, totalPages)
 }
 
-// ─── Restored Inspection Page (Full Original Questions) ─────────────────────── 
+// ─── Inspection Detail Page (Full Questions Restored) ───────────────────────── 
 async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) { 
   const passed = ins.inspection_passed === 'Pass' 
   const passColor = passed ? GREEN : RED 
@@ -205,7 +316,7 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
   drawFooter(doc, pageNum, totalPages) 
 } 
 
-// ─── Shared Helpers (Original) ──────────────────────────────────────────────── 
+// ─── Helpers (Shared) ───────────────────────────────────────────────────────── 
 function drawPageHeader(doc, logo, rightTitle, rightSub, showLogo = true) { 
   doc.setFillColor(...WHITE); doc.rect(0, 0, W, 24, 'F') 
   if (showLogo && logo) { 
@@ -222,6 +333,31 @@ function drawFooter(doc, pageNum, totalPages) {
   doc.setFont('helvetica', 'bold'); doc.setTextColor(...WHITE); doc.text(`Page ${pageNum} of ${totalPages}`, W - MR, H - 4.5, { align: 'right' }) 
 } 
 
+// Summary Table Helpers
+const SUM_ROW_H = 7; const SUM_HEAD_H = 8 
+function drawSummaryHeader(doc, y) { 
+  doc.setFillColor(...NAVY); doc.rect(ML, y, CW, SUM_HEAD_H, 'F') 
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(...WHITE) 
+  doc.text('DOOR LOCATION', ML + 3, y + 5.5) 
+  doc.text('FIRE RATING', ML + CW * 0.53, y + 5.5) 
+  doc.text('RESULT', ML + CW - 3, y + 5.5, { align: 'right' }) 
+  return y + SUM_HEAD_H 
+} 
+
+function drawSummaryRow(doc, ins, y, rowIndex) { 
+  const isPassed = ins.inspection_passed === 'Pass' 
+  doc.setFillColor(...(rowIndex % 2 === 0 ? WHITE : LGREY)); doc.rect(ML, y, CW, SUM_ROW_H, 'F') 
+  doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...DARK) 
+  const loc = doc.splitTextToSize(ins.door_location || '—', CW * 0.5)[0] 
+  doc.text(loc, ML + 3, y + 5) 
+  doc.text(ins.fire_rating || '—', ML + CW * 0.53, y + 5) 
+  const bw = 16; const bx = ML + CW - 3 - bw 
+  doc.setFillColor(...(isPassed ? GREEN : RED)); doc.roundedRect(bx, y + 1, bw, 5, 1.5, 1.5, 'F') 
+  doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...WHITE) 
+  doc.text(ins.inspection_passed || '—', bx + bw / 2, y + 5, { align: 'center' }) 
+}
+
+// Image Loaders
 async function loadImage(url) { 
   return new Promise((resolve, reject) => { 
     const img = new Image(); img.crossOrigin = 'anonymous' 
@@ -257,11 +393,4 @@ function trimWhitespace(canvas) {
   const out = document.createElement('canvas'); out.width = Math.max(1, r - l + 12); out.height = Math.max(1, b - t + 12) 
   out.getContext('2d').drawImage(canvas, l - 6, t - 6, out.width, out.height, 0, 0, out.width, out.height) 
   return out 
-}
-
-// ── Cover page (for Projects) ──
-async function coverPage(doc, logo, clientLogo, project, inspections) {
-  // ... Paste your existing coverPage code here if you want project reports to work too ...
-  // Keeping it empty here to focus on the fix you requested.
-  return 1 
 }
