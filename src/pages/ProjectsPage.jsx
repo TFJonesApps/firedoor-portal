@@ -106,7 +106,7 @@ export default function ProjectsPage() {
   async function fetchInspections() {
     const { data } = await supabase
       .from('inspections')
-      .select('id, door_asset_id, door_location, doorset_assembly_type, inspection_passed, created_at, engineer_name, project_id, recommended_action, remedial_works_completed, projects(name, client_name)')
+      .select('id, door_asset_id, door_location, doorset_assembly_type, inspection_passed, created_at, engineer_id, engineer_name, project_id, recommended_action, remedial_works_completed, projects(name, client_name)')
       .order('created_at', { ascending: false })
       .limit(500)
     setInspections(data || [])
@@ -127,12 +127,27 @@ export default function ProjectsPage() {
   }, [inspections])
 
   // Filtered latest per door
+  // Build a map of engineer_id -> best display name for filter matching
+  const engineerIdToName = useMemo(() => {
+    const map = {}
+    for (const i of inspections) {
+      const eid = i.engineer_id
+      if (!eid) continue
+      const name = i.engineer_name || eid
+      if (!map[eid] || (map[eid].includes('@') && !name.includes('@'))) map[eid] = name
+    }
+    return map
+  }, [inspections])
+
   const filteredLatest = useMemo(() => {
     let list = latestPerDoor
     if (clientFilter)    list = list.filter(i => i.projects?.client_name === clientFilter)
-    if (inspectorFilter) list = list.filter(i => i.engineer_name === inspectorFilter)
+    if (inspectorFilter) list = list.filter(i => {
+      if (i.engineer_name === inspectorFilter) return true
+      return i.engineer_id && engineerIdToName[i.engineer_id] === inspectorFilter
+    })
     return list
-  }, [latestPerDoor, clientFilter, inspectorFilter])
+  }, [latestPerDoor, clientFilter, inspectorFilter, engineerIdToName])
 
   const overdue = filteredLatest.filter(i => dueInfo(i).status === 'overdue').sort((a,b) => dueInfo(a).diff - dueInfo(b).diff)
   const soon    = filteredLatest.filter(i => dueInfo(i).status === 'soon').sort((a,b)    => dueInfo(a).diff - dueInfo(b).diff)
@@ -147,16 +162,20 @@ export default function ProjectsPage() {
   const recentFeed = useMemo(() => {
     let list = inspections
     if (clientFilter)    list = list.filter(i => i.projects?.client_name === clientFilter)
-    if (inspectorFilter) list = list.filter(i => i.engineer_name === inspectorFilter)
+    if (inspectorFilter) list = list.filter(i => {
+      if (i.engineer_name === inspectorFilter) return true
+      return i.engineer_id && engineerIdToName[i.engineer_id] === inspectorFilter
+    })
     return list.slice(0, 15)
-  }, [inspections, clientFilter, inspectorFilter])
+  }, [inspections, clientFilter, inspectorFilter, engineerIdToName])
 
-  // Activity feed — group by engineer + project + day
+  // Activity feed — group by engineer_id + project + day
   const activityFeed = useMemo(() => {
     const map = new Map()
     for (const ins of inspections.slice(0, 100)) {
       const d   = new Date(ins.created_at)
-      const key = `${ins.engineer_name}__${ins.project_id}__${d.toDateString()}`
+      const eid = ins.engineer_id || ins.engineer_name
+      const key = `${eid}__${ins.project_id}__${d.toDateString()}`
       if (!map.has(key)) map.set(key, {
         engineer:  ins.engineer_name,
         project:   ins.projects?.name,
@@ -170,25 +189,41 @@ export default function ProjectsPage() {
     return Array.from(map.values()).slice(0, 8)
   }, [inspections])
 
-  // Inspector workload this month
+  // Inspector workload this month — group by engineer_id, display best name
   const inspectorWorkload = useMemo(() => {
     const now  = new Date()
     const list = inspections.filter(i => {
       const d = new Date(i.created_at)
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
     })
-    const counts = {}
+    const counts = {}  // keyed by engineer_id
+    const names  = {}  // best display name per engineer_id
     for (const i of list) {
+      const eid  = i.engineer_id || i.engineer_name || 'Unknown'
       const name = i.engineer_name || 'Unknown'
-      counts[name] = (counts[name] || 0) + 1
+      counts[eid] = (counts[eid] || 0) + 1
+      // Prefer a real name over an email address
+      if (!names[eid] || (names[eid].includes('@') && !name.includes('@'))) {
+        names[eid] = name
+      }
     }
-    return Object.entries(counts).sort((a,b) => b[1] - a[1])
+    return Object.entries(counts)
+      .map(([eid, count]) => [names[eid] || eid, count])
+      .sort((a,b) => b[1] - a[1])
   }, [inspections])
 
-  // Unique inspectors for filter
+  // Unique inspectors for filter — deduplicate by engineer_id, prefer real name
   const inspectors = useMemo(() => {
-    const names = new Set(inspections.map(i => i.engineer_name).filter(Boolean))
-    return Array.from(names).sort()
+    const map = {}
+    for (const i of inspections) {
+      const eid = i.engineer_id || i.engineer_name
+      if (!eid) continue
+      const name = i.engineer_name || eid
+      if (!map[eid] || (map[eid].includes('@') && !name.includes('@'))) {
+        map[eid] = name
+      }
+    }
+    return [...new Set(Object.values(map))].sort()
   }, [inspections])
 
   // Stats

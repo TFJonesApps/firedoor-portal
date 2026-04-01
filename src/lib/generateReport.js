@@ -304,14 +304,36 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
     if (leftY <= rightY) leftY = cy + 4; else rightY = cy + 4 
   } 
 
-  const photos = [['Outside', ins.photo_outside_url], ['Inside', ins.photo_inside_url], ['Photo 1', ins.photo1_url], ['Photo 2', ins.photo2_url], ['Photo 3', ins.photo3_url], ['Photo 4', ins.photo4_url]].filter(([, u]) => u) 
-  if (photos.length > 0) { 
-    const barY = H - 60 
-    doc.setFillColor(...LGREY); doc.rect(ML, barY, CW, 7, 'F'); doc.setFontSize(6.5); doc.setTextColor(...NAVY); doc.text('INSPECTION PHOTOGRAPHS', ML + 5.5, barY + 4.8) 
-    for (let i = 0; i < Math.min(photos.length, 4); i++) { 
-      try { const img = await loadImage(photos[i][1]); doc.addImage(img, 'JPEG', ML + i * 45, barY + 10, 40, 32) } catch (_) {} 
-    } 
-  } 
+  const photos = [['Outside', ins.photo_outside_url], ['Inside', ins.photo_inside_url], ['Photo 1', ins.photo1_url], ['Photo 2', ins.photo2_url], ['Photo 3', ins.photo3_url], ['Photo 4', ins.photo4_url], ['Photo 5', ins.photo5_url], ['Photo 6', ins.photo6_url]].filter(([, u]) => u)
+  if (photos.length > 0) {
+    const PHOTO_COL_W = (CW - 4) / 2   // ~87mm per column
+    const PHOTO_H     = 65              // 65mm tall each
+    const PHOTO_GAP   = 4
+    const FOOTER_H    = 14
+
+    let py = Math.max(leftY, rightY) + 4  // start right after sections
+    // Header bar
+    doc.setFillColor(...LGREY); doc.rect(ML, py, CW, 7, 'F')
+    doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY); doc.text('INSPECTION PHOTOGRAPHS', ML + 5.5, py + 4.8)
+    py += 10
+
+    for (let i = 0; i < Math.min(photos.length, 6); i++) {
+      const col = i % 2
+      if (col === 0 && py + PHOTO_H + 8 > H - FOOTER_H) {
+        // Not enough room — add a new page for remaining photos
+        drawFooter(doc, pageNum, totalPages)
+        doc.addPage(); pageNum++
+        doc.setFillColor(...WHITE); doc.rect(0, 0, W, H, 'F')
+        drawPageHeader(doc, logo, project.name, 'PHOTOGRAPHS (CONTINUED)', false)
+        py = 30
+      }
+      const px = ML + col * (PHOTO_COL_W + PHOTO_GAP)
+      // Label
+      doc.setFontSize(6); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE); doc.text(photos[i][0], px, py - 1)
+      try { const img = await loadImage(photos[i][1]); doc.addImage(img, 'JPEG', px, py, PHOTO_COL_W, PHOTO_H) } catch (_) {}
+      if (col === 1 || i === photos.length - 1) py += PHOTO_H + 6
+    }
+  }
   drawFooter(doc, pageNum, totalPages) 
 } 
 
