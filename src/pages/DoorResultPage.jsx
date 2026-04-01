@@ -147,7 +147,7 @@ export default function DoorResultPage() {
                   day: '2-digit', month: 'long', year: 'numeric'
                 })}
               />
-              <InfoRow label="Inspector"   value={inspection.engineer_name || '—'} />
+              <InfoRow label="Inspector"   value={(inspection.engineer_name && !inspection.engineer_name.includes('@')) ? inspection.engineer_name : '—'} />
               <InfoRow label="Project"     value={project?.name || '—'} />
               {project?.address && (
                 <InfoRow label="Site" value={[project.address, project.postcode].filter(Boolean).join(', ')} />

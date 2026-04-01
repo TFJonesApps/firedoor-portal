@@ -3,6 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import GridLayout from 'react-grid-layout'
 
+const KNOWN_ENGINEERS = {
+  'lee.bates@tfjones.com': 'Lee Bates',
+  'david.metcalfe@tfjones.com': 'David Metcalfe',
+  'trevor.mccormick@tfjones.com': 'Trevor McCormick',
+  'allan.hughes@tfjones.com': 'Allan Hughes',
+  'gareth.robertson@tfjones.com': 'Gareth Robertson',
+  'keiran.thompson@tfjones.com': 'Keiran Thompson',
+  'jwild.tfjones@gmail.com': 'John Wild',
+}
+
 const PANEL_LABELS = {
   projects: 'Projects', activity: 'Activity Feed', recent: 'Recent Inspections',
   remedials: 'Remedial Works', reinspection: 'Reinspection Due', workload: 'Inspector Workload',
@@ -133,7 +143,7 @@ export default function ProjectsPage() {
     for (const i of inspections) {
       const eid = i.engineer_id
       if (!eid) continue
-      const name = i.engineer_name || eid
+      const name = KNOWN_ENGINEERS[i.engineer_name?.toLowerCase()] || i.engineer_name || eid
       if (!map[eid] || (map[eid].includes('@') && !name.includes('@'))) map[eid] = name
     }
     return map
@@ -370,7 +380,7 @@ export default function ProjectsPage() {
                                 <td style={s.td}><span style={{ color: '#CBD5E1' }}>{[p.address, p.postcode].filter(Boolean).join(', ') || '—'}</span></td>
                                 <td style={s.td}><span style={{ color: '#EEFF00', fontWeight: 600 }}>{p.client_name || '—'}</span></td>
                                 <td style={s.td}><span style={{ color: '#CBD5E1' }}>{p.order_number || '—'}</span></td>
-                                <td style={s.td}><span style={{ color: '#fff', fontWeight: 500 }}>{p.engineer_name || '—'}</span></td>
+                                <td style={s.td}><span style={{ color: '#fff', fontWeight: 500 }}>{(p.engineer_id && engineerIdToName[p.engineer_id]) || KNOWN_ENGINEERS[p.engineer_name?.toLowerCase()] || (p.engineer_name?.includes('@') ? '—' : p.engineer_name) || '—'}</span></td>
                                 <td style={s.td}><span style={{ color: '#94A3B8' }}>{new Date(p.created_at).toLocaleDateString('en-GB')}</span></td>
                               </tr>
                             ))}
@@ -417,7 +427,7 @@ export default function ProjectsPage() {
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={s.feedDoor}>{ins.door_location || ins.door_asset_id || '—'}</div>
                               <div style={s.feedProject}>{ins.projects?.name || '—'} · {ins.projects?.client_name || '—'}</div>
-                              <div style={s.feedMeta}>{new Date(ins.created_at).toLocaleDateString('en-GB')} · {ins.engineer_name || '—'}</div>
+                              <div style={s.feedMeta}>{new Date(ins.created_at).toLocaleDateString('en-GB')} · {(ins.engineer_id && engineerIdToName[ins.engineer_id]) || ins.engineer_name || '—'}</div>
                             </div>
                             <PassBadge passed={ins.inspection_passed === 'Pass'} />
                           </div>

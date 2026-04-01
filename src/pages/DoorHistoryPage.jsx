@@ -223,7 +223,7 @@ async function search(id) {
                               <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>{date}</span>
                             </div>
                             <p style={{ color: '#8A9BAD', fontSize: 13, margin: '4px 0 0' }}>
-                              {ins.projects?.name || '—'} &middot; {ins.engineer_name || '—'}
+                              {ins.projects?.name || '—'} &middot; {(ins.engineer_name && !ins.engineer_name.includes('@')) ? ins.engineer_name : '—'}
                             </p>
                             {ins.projects?.client_name && (
                               <p style={{ color: YELLOW, fontSize: 12, margin: '2px 0 0', fontWeight: 600 }}>{ins.projects.client_name}</p>

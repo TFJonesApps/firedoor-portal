@@ -346,7 +346,7 @@ export default function ProjectDetailPage() {
           )}
           <div style={{ textAlign: 'right' }}>
             <div style={{ color: GREY, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Inspector</div>
-            <div style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>{project?.engineer_name || '—'}</div>
+            <div style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>{(project?.engineer_name && !project.engineer_name.includes('@')) ? project.engineer_name : '—'}</div>
           </div>
         </div>
 
@@ -470,7 +470,7 @@ function InspectionCard({ inspection: ins, project, expanded, onToggle, onPhoto,
     ['Remedial Works',       ins.remedial_works_completed],
     ['Repair Actions',       ins.recommended_repair_actions],
     ['Replacement Reason',   ins.replacement_reason],
-    ['Inspector',            ins.engineer_name],
+    ['Inspector',            (ins.engineer_name && !ins.engineer_name.includes('@')) ? ins.engineer_name : (project?.engineer_name && !project.engineer_name.includes('@')) ? project.engineer_name : ins.engineer_name],
   ].filter(([, v]) => v)
 
   const actionedAt = ins.remedial_actioned_at
