@@ -247,7 +247,8 @@ export default function ProjectsPage() {
       p.address?.toLowerCase().includes(q)       ||
       p.postcode?.toLowerCase().includes(q)      ||
       p.client_name?.toLowerCase().includes(q)   ||
-      p.engineer_name?.toLowerCase().includes(q)
+      p.engineer_name?.toLowerCase().includes(q) ||
+      p.order_number?.toLowerCase().includes(q)
   })
 
   return (
@@ -361,13 +362,14 @@ export default function ProjectsPage() {
                     ) : (
                       <div style={s.tableWrap}>
                         <table style={s.table}>
-                          <thead><tr>{['Project','Address','Client','Inspector','Created'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+                          <thead><tr>{['Project','Address','Client','Order No.','Inspector','Created'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
                           <tbody>
                             {filteredProjects.map(p => (
                               <tr key={p.id} style={s.row} onClick={() => navigate(`/project/${p.id}`, { state: { project: p } })}>
                                 <td style={s.td}><span style={s.projectName}>{p.name}</span></td>
                                 <td style={s.td}><span style={{ color: '#CBD5E1' }}>{[p.address, p.postcode].filter(Boolean).join(', ') || '—'}</span></td>
                                 <td style={s.td}><span style={{ color: '#EEFF00', fontWeight: 600 }}>{p.client_name || '—'}</span></td>
+                                <td style={s.td}><span style={{ color: '#CBD5E1' }}>{p.order_number || '—'}</span></td>
                                 <td style={s.td}><span style={{ color: '#fff', fontWeight: 500 }}>{p.engineer_name || '—'}</span></td>
                                 <td style={s.td}><span style={{ color: '#94A3B8' }}>{new Date(p.created_at).toLocaleDateString('en-GB')}</span></td>
                               </tr>
