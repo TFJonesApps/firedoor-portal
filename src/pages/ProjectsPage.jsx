@@ -77,6 +77,7 @@ export default function ProjectsPage() {
   const [gridWidth,     setGridWidth]     = useState(window.innerWidth - 64)
   const [showCalendar,  setShowCalendar]  = useState(false)
   const [showExport,    setShowExport]    = useState(false)
+  const [showArchived,  setShowArchived]  = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -201,14 +202,18 @@ export default function ProjectsPage() {
     return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear()
   }).length
 
-  // Projects search filter
-  const filteredProjects = projects.filter(p =>
-    p.name?.toLowerCase().includes(search.toLowerCase())            ||
-    p.address?.toLowerCase().includes(search.toLowerCase())        ||
-    p.postcode?.toLowerCase().includes(search.toLowerCase())       ||
-    p.client_name?.toLowerCase().includes(search.toLowerCase())    ||
-    p.engineer_name?.toLowerCase().includes(search.toLowerCase())
-  )
+  // Projects search + archive filter
+  const filteredProjects = projects.filter(p => {
+    const archived = p.is_archived === true
+    if (showArchived !== archived) return false
+    const q = search.toLowerCase()
+    return !q ||
+      p.name?.toLowerCase().includes(q)          ||
+      p.address?.toLowerCase().includes(q)       ||
+      p.postcode?.toLowerCase().includes(q)      ||
+      p.client_name?.toLowerCase().includes(q)   ||
+      p.engineer_name?.toLowerCase().includes(q)
+  })
 
   return (
     <div style={s.page}>
@@ -226,6 +231,7 @@ export default function ProjectsPage() {
           </div>
           <div style={s.headerRight}>
             <span style={s.userEmail}>{user?.email}</span>
+            <button style={s.btn} onClick={() => navigate('/door-history')}>Door History</button>
             <button style={s.btn} onClick={() => navigate('/users')}>Users</button>
             <button style={s.btn} onClick={() => setShowExport(true)}>⬇ Export</button>
             <button style={s.btn} onClick={() => { localStorage.removeItem(LAYOUT_KEY); setLayout(DEFAULT_LAYOUT) }}>Reset Layout</button>
@@ -302,7 +308,19 @@ export default function ProjectsPage() {
                 <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
                 {id === 'projects' && (
                   <>
-                    <SectionTitle>Projects</SectionTitle>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <SectionTitle>Projects</SectionTitle>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          onClick={() => setShowArchived(false)}
+                          style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 6, border: 'none', cursor: 'pointer', background: !showArchived ? '#EEFF00' : '#1A3A5C', color: !showArchived ? '#0D1F35' : '#8A9BAD' }}
+                        >Active</button>
+                        <button
+                          onClick={() => setShowArchived(true)}
+                          style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 6, border: 'none', cursor: 'pointer', background: showArchived ? '#EEFF00' : '#1A3A5C', color: showArchived ? '#0D1F35' : '#8A9BAD' }}
+                        >Archived</button>
+                      </div>
+                    </div>
                     {loading ? <Spinner /> : filteredProjects.length === 0 ? (
                       <p style={{ color: '#8A9BAD', textAlign: 'center', padding: 40 }}>No projects found.</p>
                     ) : (

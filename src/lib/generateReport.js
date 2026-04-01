@@ -19,6 +19,18 @@ const ML = 16
 const MR = 16
 const CW = W - ML - MR   // 178mm
 
+// ─── Single inspection report ─────────────────────────────────────────────────
+export async function generateSingleInspectionReport(project, inspection) {
+  const doc  = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null)
+
+  await inspectionPage(doc, logo, project, inspection, 1, 1)
+
+  const dateStr = new Date(inspection.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  const loc     = (inspection.door_location || 'Door').replace(/[/\\?%*:|"<>]/g, '')
+  doc.save(`${loc} - ${dateStr}.pdf`)
+}
+
 // ─── Entry point ──────────────────────────────────────────────────────────────
 export async function generateProjectReport(project, inspections) {
   const doc  = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })

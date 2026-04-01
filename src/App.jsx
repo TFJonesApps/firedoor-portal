@@ -9,6 +9,7 @@ import ClientScanPage from './pages/ClientScanPage'
 import DoorResultPage from './pages/DoorResultPage'
 import UsersPage from './pages/UsersPage'
 import InspectorPage from './pages/InspectorPage'
+import DoorHistoryPage from './pages/DoorHistoryPage'
 
 export default function App() {
   const [session, setSession] = useState(undefined) // undefined = loading
@@ -64,7 +65,8 @@ export default function App() {
         <Route path="/login"       element={!session ? <LoginPage />         : <Navigate to={roleHome} />} />
         <Route path="/"            element={isAdmin  ? <ProjectsPage />      : <Navigate to={session ? roleHome : '/login'} />} />
         <Route path="/project/:id" element={isAdmin  ? <ProjectDetailPage /> : <Navigate to={session ? roleHome : '/login'} />} />
-        <Route path="/users"       element={isAdmin  ? <UsersPage />         : <Navigate to={session ? roleHome : '/login'} />} />
+        <Route path="/users"        element={isAdmin  ? <UsersPage />         : <Navigate to={session ? roleHome : '/login'} />} />
+        <Route path="/door-history" element={isAdmin  ? <DoorHistoryPage />   : <Navigate to={session ? roleHome : '/login'} />} />
 
         {/* Inspector landing */}
         <Route path="/inspector" element={isInspector ? <InspectorPage /> : <Navigate to={session ? roleHome : '/login'} />} />
