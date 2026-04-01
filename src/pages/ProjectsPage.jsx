@@ -177,7 +177,7 @@ export default function ProjectsPage() {
       const eid = ins.engineer_id || ins.engineer_name
       const key = `${eid}__${ins.project_id}__${d.toDateString()}`
       if (!map.has(key)) map.set(key, {
-        engineer:  ins.engineer_name,
+        engineer:  (ins.engineer_id && engineerIdToName[ins.engineer_id]) || ins.engineer_name,
         project:   ins.projects?.name,
         client:    ins.projects?.client_name,
         date:      ins.created_at,
@@ -187,7 +187,7 @@ export default function ProjectsPage() {
       map.get(key).count++
     }
     return Array.from(map.values()).slice(0, 8)
-  }, [inspections])
+  }, [inspections, engineerIdToName])
 
   // Inspector workload this month — group by engineer_id, display best name
   const inspectorWorkload = useMemo(() => {

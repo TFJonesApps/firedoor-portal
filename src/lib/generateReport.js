@@ -250,8 +250,9 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
   doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE); doc.text(meta, ML + 7, headY + headH - 4) 
 
   const sections = [ 
-    { title: 'Door Details', fields: [ 
-      ['What type of survey was carried out?', ins.survey_type], 
+    { title: 'Door Details', fields: [
+      ['Order Number', project.order_number],
+      ['What type of survey was carried out?', ins.survey_type],
       ['What is the doorset assembly type?', ins.doorset_assembly_type], 
       ['What is the door configuration?', ins.doorset_configuration], 
       ['What is the fire rating of the door?', ins.fire_rating], 

@@ -136,6 +136,7 @@ export default function DoorResultPage() {
               <InfoRow label="Door Type"    value={inspection.doorset_assembly_type || inspection.survey_type || '—'} />
               <InfoRow label="Fire Rating"  value={inspection.fire_rating || '—'} />
               <InfoRow label="Configuration" value={inspection.doorset_configuration || '—'} />
+              {project?.order_number && <InfoRow label="Order Number" value={project.order_number} />}
             </div>
 
             {/* Inspection card */}

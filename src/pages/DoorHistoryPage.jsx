@@ -269,6 +269,7 @@ async function search(id) {
 
 function DetailGrid({ ins }) {
   const fields = [
+    ['Order Number', ins.projects?.order_number],
     ['Survey Type', ins.survey_type],
     ['Assembly Type', ins.doorset_assembly_type],
     ['Configuration', ins.doorset_configuration],

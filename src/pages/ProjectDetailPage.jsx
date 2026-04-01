@@ -406,6 +406,7 @@ export default function ProjectDetailPage() {
           <InspectionCard
             key={ins.id}
             inspection={ins}
+            project={project}
             expanded={expanded === ins.id}
             onToggle={() => setExpanded(expanded === ins.id ? null : ins.id)}
             onPhoto={setLightbox}
@@ -418,7 +419,7 @@ export default function ProjectDetailPage() {
   )
 }
 
-function InspectionCard({ inspection: ins, expanded, onToggle, onPhoto, onMarkActioned, onUndoActioned }) {
+function InspectionCard({ inspection: ins, project, expanded, onToggle, onPhoto, onMarkActioned, onUndoActioned }) {
   const passed    = ins.inspection_passed === 'Pass'
   const passColor = passed ? PASS_COLOR : FAIL_COLOR
   const date      = new Date(ins.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -440,6 +441,7 @@ function InspectionCard({ inspection: ins, expanded, onToggle, onPhoto, onMarkAc
   ].filter(([, url]) => url)
 
   const fields = [
+    ['Order Number',         project?.order_number],
     ['Survey Type',          ins.survey_type],
     ['Assembly Type',        ins.doorset_assembly_type],
     ['Configuration',        ins.doorset_configuration],
