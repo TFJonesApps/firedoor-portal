@@ -26,35 +26,41 @@ export default function DoorHistoryPage() {
   }, [])
 
 async function search(id) {
-  const term = (id || searchInput || '').trim();
-  if (!term) return;
+  const term = (id || searchInput || '').trim()
+  if (!term) return
 
-  setAssetId(term);
-  setSearchInput(term);
-  setLoading(true);
-  setSearched(true);
-  setExpanded(null);
+  setAssetId(term)
+  setSearchInput(term)
+  setLoading(true)
+  setSearched(true)
+  setInspections([]) // Clear old results immediately
 
-  // We use a regular select here. 
-  // If you use !inner, it FORCES the filter to match.
-  // If we want to see why it's failing, we use a normal join first.
+  // Use !inner to FORCE the relationship
   let query = supabase
     .from('inspections')
-    .select('*, projects(*)') 
-    .ilike('door_asset_id', term)
-    .order('created_at', { ascending: false });
+    .select(`
+      *,
+      projects!inner(*)
+    `)
+    .eq('door_asset_id', term)
 
-  // ONLY apply the filter if the user has specifically picked a client
+  // STRICT FILTER: If a client is selected, only return if project.client_id matches
   if (clientFilter) {
-    query = query.eq('projects.client_id', clientFilter);
+    query = query.eq('projects.client_id', clientFilter)
   }
 
-  const { data, error } = await query;
+  const { data, error } = await query
   
-  // FILTERING CHECK: 
-  // If data is empty but we have a clientFilter, the barcode belongs to a different client.
-  setInspections(error ? [] : (data || []));
-  setLoading(false);
+  if (error) {
+    console.error('Search error:', error)
+    setInspections([])
+  } else {
+    // If Barcode exists but belongs to a different client, 
+    // Supabase will return an empty array [] because of the !inner + eq filter
+    setInspections(data || [])
+  }
+  
+  setLoading(false)
 }
 
   useEffect(() => {
