@@ -263,6 +263,7 @@ export default function ProjectDetailPage() {
               <p style={{ color: GREY, fontSize: 13, margin: 0 }}>
                 {[project?.address, project?.postcode].filter(Boolean).join(', ')}
                 {project?.client_name && <span style={{ color: '#EEFF00', marginLeft: 12 }}>{project.client_name}</span>}
+                {project?.order_number && <span style={{ color: '#8A9BAD', marginLeft: 12 }}>Order: <strong style={{ color: '#fff' }}>{project.order_number}</strong></span>}
               </p>
             </div>
           ) : (

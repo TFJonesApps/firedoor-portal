@@ -145,14 +145,15 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
   doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY); doc.text('Project Information', ML, y) 
   y += 4; doc.setFillColor(...MGREY); doc.rect(ML, y, CW, 0.4, 'F'); y += 0.4 
 
-  const infoRows = [ 
-    ['Client', project.client_name || '—'], 
-    ['Fire Door Inspector', project.engineer_name || '—'], 
-    ['Address', [project.address, project.postcode].filter(Boolean).join(', ') || '—'], 
-    ['Report Date', dateStr], 
-    ['Total Inspections', String(total)], 
-  ] 
-  infoRows.forEach(([label, value], i) => { 
+  const infoRows = [
+    ['Client', project.client_name || '—'],
+    ['Fire Door Inspector', (project.engineer_name && !project.engineer_name.includes('@')) ? project.engineer_name : '—'],
+    ['Address', [project.address, project.postcode].filter(Boolean).join(', ') || '—'],
+    project.order_number ? ['Order Number', project.order_number] : null,
+    ['Report Date', dateStr],
+    ['Total Inspections', String(total)],
+  ].filter(Boolean)
+  infoRows.forEach(([label, value], i) => {
     const rowH = 8.5; const ry = y + i * rowH 
     doc.setFillColor(...(i % 2 === 0 ? LGREY : WHITE)); doc.rect(ML, ry, CW, rowH, 'F') 
     doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text(label, ML + 3, ry + 5.8) 
@@ -246,12 +247,12 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
   doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255) 
   doc.text(passLabel, badgeX + badgeW / 2, headY + 11, { align: 'center' }) 
 
-  const meta = [ins.door_asset_id && `Asset ID: ${ins.door_asset_id}`, ins.fire_rating, new Date(ins.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }), ins.engineer_name && `Inspector: ${ins.engineer_name}`].filter(Boolean).join(' · ') 
+  const inspectorName = (ins.engineer_name && !ins.engineer_name.includes('@')) ? ins.engineer_name : project.engineer_name || ins.engineer_name
+  const meta = [ins.door_asset_id && `Asset ID: ${ins.door_asset_id}`, ins.fire_rating, new Date(ins.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }), inspectorName && `Inspector: ${inspectorName}`].filter(Boolean).join(' · ')
   doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE); doc.text(meta, ML + 7, headY + headH - 4) 
 
   const sections = [ 
     { title: 'Door Details', fields: [
-      ['Order Number', project.order_number],
       ['What type of survey was carried out?', ins.survey_type],
       ['What is the doorset assembly type?', ins.doorset_assembly_type], 
       ['What is the door configuration?', ins.doorset_configuration], 
@@ -317,7 +318,7 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
     const numRows     = Math.ceil(photos.length / 2)
     let py            = Math.max(leftY, rightY) + 4
     const available   = H - FOOTER_H - py - HEADER_H  // total vertical space left
-    const CELL_H      = Math.min(65, Math.max(25, (available - (numRows - 1) * ROW_GAP - numRows * LABEL_H) / numRows))
+    const CELL_H      = Math.min(55, (available - (numRows - 1) * ROW_GAP - numRows * LABEL_H) / numRows)
     const ROW_H       = CELL_H + LABEL_H + ROW_GAP
 
     // Header bar
