@@ -94,12 +94,16 @@ export default function ProjectsPage() {
   const [gridWidth,     setGridWidth]     = useState(window.innerWidth - 64)
   const [showCalendar,  setShowCalendar]  = useState(false)
   const [showExport,    setShowExport]    = useState(false)
-  const [showArchived,  setShowArchived]  = useState(false)
+  const [projectTab,    setProjectTab]    = useState('active') // 'active' | 'completed' | 'archived'
   const [showCreateProject, setShowCreateProject] = useState(false)
   const [newProject, setNewProject] = useState({ name: '', address: '', postcode: '', client_id: '', order_number: '', engineer_id: '' })
   const [creatingProject, setCreatingProject] = useState(false)
   const [createProjectError, setCreateProjectError] = useState('')
   const [inspectorUsers, setInspectorUsers] = useState([])
+  const [showProjectsExpanded, setShowProjectsExpanded] = useState(false)
+  const [expandedClientFilter, setExpandedClientFilter] = useState('')
+  const [expandedInspectorFilter, setExpandedInspectorFilter] = useState('')
+  const [expandedSearch, setExpandedSearch] = useState('')
   const [showReinspect, setShowReinspect] = useState(null)
   const [reinspectOrder, setReinspectOrder] = useState('')
   const [reinspectEngineerId, setReinspectEngineerId] = useState('')
@@ -329,11 +333,36 @@ export default function ProjectsPage() {
     return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear()
   }).length
 
-  // Projects search + archive filter
+  // Projects search + tab filter
   const filteredProjects = projects.filter(p => {
-    const archived = p.is_archived === true
-    if (showArchived !== archived) return false
+    const archived  = p.is_archived === true
+    const completed = p.is_completed === true
+    if (projectTab === 'active'    && (archived || completed)) return false
+    if (projectTab === 'completed' && !completed) return false
+    if (projectTab === 'archived'  && !archived) return false
     const q = search.toLowerCase()
+    return !q ||
+      p.name?.toLowerCase().includes(q)          ||
+      p.address?.toLowerCase().includes(q)       ||
+      p.postcode?.toLowerCase().includes(q)      ||
+      p.client_name?.toLowerCase().includes(q)   ||
+      p.engineer_name?.toLowerCase().includes(q) ||
+      p.order_number?.toLowerCase().includes(q)
+  })
+
+  // Expanded modal filtered projects (with its own filters)
+  const expandedProjects = projects.filter(p => {
+    const archived  = p.is_archived === true
+    const completed = p.is_completed === true
+    if (projectTab === 'active'    && (archived || completed)) return false
+    if (projectTab === 'completed' && !completed) return false
+    if (projectTab === 'archived'  && !archived) return false
+    if (expandedClientFilter && p.client_name !== expandedClientFilter) return false
+    if (expandedInspectorFilter) {
+      const name = (p.engineer_id && engineerIdToName[p.engineer_id]) || p.engineer_name || ''
+      if (name !== expandedInspectorFilter) return false
+    }
+    const q = expandedSearch.toLowerCase()
     return !q ||
       p.name?.toLowerCase().includes(q)          ||
       p.address?.toLowerCase().includes(q)       ||
@@ -442,20 +471,21 @@ export default function ProjectsPage() {
                 {id === 'projects' && (
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <SectionTitle>Projects</SectionTitle>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <SectionTitle>Projects</SectionTitle>
+                        <button onClick={() => { setShowProjectsExpanded(true); setExpandedSearch(''); setExpandedClientFilter(''); setExpandedInspectorFilter('') }} style={{ background: 'none', border: '1px solid #243F5C', borderRadius: 4, padding: '2px 6px', color: '#8A9BAD', fontSize: 10, cursor: 'pointer' }} title="Expand">⛶</button>
+                      </div>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button
                           onClick={() => { setShowCreateProject(v => !v); setCreateProjectError('') }}
                           style={s.cpBtn}
                         >{ showCreateProject ? 'Cancel' : '+ New Project' }</button>
-                        <button
-                          onClick={() => setShowArchived(false)}
-                          style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 6, border: 'none', cursor: 'pointer', background: !showArchived ? '#EEFF00' : '#1A3A5C', color: !showArchived ? '#0D1F35' : '#8A9BAD' }}
-                        >Active</button>
-                        <button
-                          onClick={() => setShowArchived(true)}
-                          style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 6, border: 'none', cursor: 'pointer', background: showArchived ? '#EEFF00' : '#1A3A5C', color: showArchived ? '#0D1F35' : '#8A9BAD' }}
-                        >Archived</button>
+                        {['active', 'completed', 'archived'].map(tab => (
+                          <button key={tab}
+                            onClick={() => setProjectTab(tab)}
+                            style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 6, border: 'none', cursor: 'pointer', background: projectTab === tab ? (tab === 'completed' ? '#4CAF50' : '#EEFF00') : '#1A3A5C', color: projectTab === tab ? (tab === 'completed' ? '#fff' : '#0D1F35') : '#8A9BAD', textTransform: 'capitalize' }}
+                          >{tab}</button>
+                        ))}
                       </div>
                     </div>
                     {loading ? <Spinner /> : filteredProjects.length === 0 ? (
@@ -467,7 +497,10 @@ export default function ProjectsPage() {
                           <tbody>
                             {filteredProjects.map(p => (
                               <tr key={p.id} style={s.row} onClick={() => navigate(`/project/${p.id}`, { state: { project: p } })}>
-                                <td style={s.td}><span style={s.projectName}>{p.name}</span></td>
+                                <td style={s.td}>
+                                  <span style={s.projectName}>{p.name}</span>
+                                  {p.is_completed && <span style={{ background: '#4CAF50', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, marginLeft: 8, verticalAlign: 'middle' }}>COMPLETE</span>}
+                                </td>
                                 <td style={s.td}><span style={{ color: '#CBD5E1' }}>{[p.address, p.postcode].filter(Boolean).join(', ') || '—'}</span></td>
                                 <td style={s.td}><span style={{ color: '#EEFF00', fontWeight: 600 }}>{p.client_name || '—'}</span></td>
                                 <td style={s.td}><span style={{ color: '#CBD5E1' }}>{p.order_number || '—'}</span></td>
@@ -576,6 +609,82 @@ export default function ProjectsPage() {
             ))}
         </GridLayout>
       </div>
+
+      {showProjectsExpanded && (
+        <div style={s.cpOverlay} onClick={() => setShowProjectsExpanded(false)}>
+          <div style={s.expandedModal} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Projects</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  onClick={() => { setShowProjectsExpanded(false); setShowCreateProject(true); setCreateProjectError('') }}
+                  style={s.cpBtn}
+                >+ New Project</button>
+                {['active', 'completed', 'archived'].map(tab => (
+                  <button key={tab}
+                    onClick={() => setProjectTab(tab)}
+                    style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 6, border: 'none', cursor: 'pointer', background: projectTab === tab ? (tab === 'completed' ? '#4CAF50' : '#EEFF00') : '#1A3A5C', color: projectTab === tab ? (tab === 'completed' ? '#fff' : '#0D1F35') : '#8A9BAD', textTransform: 'capitalize' }}
+                  >{tab}</button>
+                ))}
+                <button type="button" onClick={() => setShowProjectsExpanded(false)} style={{ background: 'none', border: 'none', color: '#8A9BAD', fontSize: 22, cursor: 'pointer', padding: '0 4px' }}>&times;</button>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+              <input
+                style={{ ...s.cpInput, flex: 1 }}
+                placeholder="Search projects, addresses, postcodes, order numbers…"
+                value={expandedSearch}
+                onChange={e => setExpandedSearch(e.target.value)}
+              />
+              <select style={{ ...s.cpInput, minWidth: 160 }} value={expandedClientFilter} onChange={e => setExpandedClientFilter(e.target.value)}>
+                <option value="">All Clients</option>
+                {clients.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+              </select>
+              <select style={{ ...s.cpInput, minWidth: 160 }} value={expandedInspectorFilter} onChange={e => setExpandedInspectorFilter(e.target.value)}>
+                <option value="">All Inspectors</option>
+                {inspectors.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {expandedProjects.length === 0 ? (
+                <p style={{ color: '#8A9BAD', textAlign: 'center', padding: 40 }}>No projects found.</p>
+              ) : (
+                <table style={s.table}>
+                  <thead><tr>{['Project','Address','Client','Order No.','Inspector','Created','Doors','Pass Rate',''].map(h => <th key={h} style={{ ...s.th, position: 'sticky', top: 0, zIndex: 1 }}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {expandedProjects.map(p => {
+                      const pIns = inspections.filter(i => i.project_id === p.id)
+                      const doorCount = pIns.length
+                      const passRate = doorCount > 0 ? Math.round((pIns.filter(i => i.inspection_passed === 'Pass').length / doorCount) * 100) : '—'
+                      return (
+                        <tr key={p.id} style={s.row} onClick={() => { setShowProjectsExpanded(false); navigate(`/project/${p.id}`, { state: { project: p } }) }}>
+                          <td style={s.td}>
+                            <span style={s.projectName}>{p.name}</span>
+                            {p.is_completed && <span style={{ background: '#4CAF50', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, marginLeft: 8, verticalAlign: 'middle' }}>COMPLETE</span>}
+                          </td>
+                          <td style={s.td}><span style={{ color: '#CBD5E1' }}>{[p.address, p.postcode].filter(Boolean).join(', ') || '—'}</span></td>
+                          <td style={s.td}><span style={{ color: '#EEFF00', fontWeight: 600 }}>{p.client_name || '—'}</span></td>
+                          <td style={s.td}><span style={{ color: '#CBD5E1' }}>{p.order_number || '—'}</span></td>
+                          <td style={s.td}><span style={{ color: '#fff', fontWeight: 500 }}>{(p.engineer_id && engineerIdToName[p.engineer_id]) || KNOWN_ENGINEERS[p.engineer_name?.toLowerCase()] || (p.engineer_name?.includes('@') ? '—' : p.engineer_name) || '—'}</span></td>
+                          <td style={s.td}><span style={{ color: '#94A3B8' }}>{new Date(p.created_at).toLocaleDateString('en-GB')}</span></td>
+                          <td style={s.td}><span style={{ color: '#fff', fontWeight: 600 }}>{doorCount || '—'}</span></td>
+                          <td style={s.td}><span style={{ color: passRate === '—' ? '#8A9BAD' : passRate >= 80 ? '#4CAF50' : passRate >= 50 ? '#FF9800' : '#F44336', fontWeight: 600 }}>{passRate === '—' ? '—' : `${passRate}%`}</span></td>
+                          <td style={s.td}>
+                            <button style={s.reinspectBtn} onClick={e => { e.stopPropagation(); setShowProjectsExpanded(false); setShowReinspect(p); setReinspectEngineerId(p.engineer_id || ''); setReinspectOrder('') }}>
+                              Reinspect
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div style={{ color: '#4A6580', fontSize: 11, marginTop: 8, textAlign: 'right' }}>{expandedProjects.length} project{expandedProjects.length !== 1 ? 's' : ''}</div>
+          </div>
+        </div>
+      )}
 
       {showReinspect && (
         <div style={s.cpOverlay} onClick={() => setShowReinspect(null)}>
