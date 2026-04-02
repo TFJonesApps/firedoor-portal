@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
-const FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`
+const FUNCTION_URL = 'https://ztagewwelwgrhmibikcv.supabase.co/functions/v1/create-user'
 
 export default function UsersPage() {
   const navigate = useNavigate()
