@@ -47,7 +47,9 @@ export default function UsersPage() {
       },
       body: JSON.stringify(body),
     })
-    const json = await res.json()
+    const text = await res.text()
+    let json
+    try { json = JSON.parse(text) } catch { throw new Error(text || `Request failed (${res.status})`) }
     if (!res.ok) throw new Error(json.error || 'Request failed')
     return json
   }

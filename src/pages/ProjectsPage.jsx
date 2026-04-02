@@ -414,46 +414,6 @@ export default function ProjectsPage() {
                         >Archived</button>
                       </div>
                     </div>
-                    {showCreateProject && (
-                      <form onSubmit={createProject} style={s.cpForm}>
-                        <div style={s.cpGrid}>
-                          <div style={s.cpField}>
-                            <label style={s.cpLabel}>Project Name *</label>
-                            <input style={s.cpInput} required placeholder="e.g. Block A Fire Doors" value={newProject.name} onChange={e => setNewProject(v => ({ ...v, name: e.target.value }))} />
-                          </div>
-                          <div style={s.cpField}>
-                            <label style={s.cpLabel}>Address</label>
-                            <input style={s.cpInput} placeholder="Site address" value={newProject.address} onChange={e => setNewProject(v => ({ ...v, address: e.target.value }))} />
-                          </div>
-                          <div style={s.cpField}>
-                            <label style={s.cpLabel}>Postcode</label>
-                            <input style={s.cpInput} placeholder="e.g. WN1 1AA" value={newProject.postcode} onChange={e => setNewProject(v => ({ ...v, postcode: e.target.value }))} />
-                          </div>
-                          <div style={s.cpField}>
-                            <label style={s.cpLabel}>Client</label>
-                            <select style={s.cpInput} value={newProject.client_id} onChange={e => setNewProject(v => ({ ...v, client_id: e.target.value }))}>
-                              <option value="">— Select Client —</option>
-                              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                          </div>
-                          <div style={s.cpField}>
-                            <label style={s.cpLabel}>Order Number</label>
-                            <input style={s.cpInput} placeholder="e.g. ORD-001" value={newProject.order_number} onChange={e => setNewProject(v => ({ ...v, order_number: e.target.value }))} />
-                          </div>
-                          <div style={s.cpField}>
-                            <label style={s.cpLabel}>Assign to Inspector *</label>
-                            <select style={s.cpInput} required value={newProject.engineer_id} onChange={e => setNewProject(v => ({ ...v, engineer_id: e.target.value }))}>
-                              <option value="">— Select Inspector —</option>
-                              {inspectorUsers.map(u => <option key={u.id} value={u.id}>{KNOWN_ENGINEERS[u.email?.toLowerCase()] || u.email}</option>)}
-                            </select>
-                          </div>
-                        </div>
-                        {createProjectError && <p style={{ color: '#F44336', fontSize: 12, margin: '8px 0 0' }}>{createProjectError}</p>}
-                        <button style={s.cpSave} type="submit" disabled={creatingProject}>
-                          {creatingProject ? 'Creating…' : 'Create Project'}
-                        </button>
-                      </form>
-                    )}
                     {loading ? <Spinner /> : filteredProjects.length === 0 ? (
                       <p style={{ color: '#8A9BAD', textAlign: 'center', padding: 40 }}>No projects found.</p>
                     ) : (
@@ -590,6 +550,56 @@ export default function ProjectsPage() {
             ))}
         </GridLayout>
       </div>
+
+      {showCreateProject && (
+        <div style={s.cpOverlay} onClick={() => setShowCreateProject(false)}>
+          <form onSubmit={createProject} style={s.cpModal} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Create New Project</h2>
+              <button type="button" onClick={() => setShowCreateProject(false)} style={{ background: 'none', border: 'none', color: '#8A9BAD', fontSize: 22, cursor: 'pointer', padding: '0 4px' }}>&times;</button>
+            </div>
+            <div style={s.cpGrid}>
+              <div style={s.cpField}>
+                <label style={s.cpLabel}>Project Name *</label>
+                <input style={s.cpInput} required placeholder="e.g. Block A Fire Doors" value={newProject.name} onChange={e => setNewProject(v => ({ ...v, name: e.target.value }))} />
+              </div>
+              <div style={s.cpField}>
+                <label style={s.cpLabel}>Address</label>
+                <input style={s.cpInput} placeholder="Site address" value={newProject.address} onChange={e => setNewProject(v => ({ ...v, address: e.target.value }))} />
+              </div>
+              <div style={s.cpField}>
+                <label style={s.cpLabel}>Postcode</label>
+                <input style={s.cpInput} placeholder="e.g. WN1 1AA" value={newProject.postcode} onChange={e => setNewProject(v => ({ ...v, postcode: e.target.value }))} />
+              </div>
+              <div style={s.cpField}>
+                <label style={s.cpLabel}>Client</label>
+                <select style={s.cpInput} value={newProject.client_id} onChange={e => setNewProject(v => ({ ...v, client_id: e.target.value }))}>
+                  <option value="">— Select Client —</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div style={s.cpField}>
+                <label style={s.cpLabel}>Order Number</label>
+                <input style={s.cpInput} placeholder="e.g. ORD-001" value={newProject.order_number} onChange={e => setNewProject(v => ({ ...v, order_number: e.target.value }))} />
+              </div>
+              <div style={s.cpField}>
+                <label style={s.cpLabel}>Assign to Inspector *</label>
+                <select style={s.cpInput} required value={newProject.engineer_id} onChange={e => setNewProject(v => ({ ...v, engineer_id: e.target.value }))}>
+                  <option value="">— Select Inspector —</option>
+                  {inspectorUsers.map(u => <option key={u.id} value={u.id}>{KNOWN_ENGINEERS[u.email?.toLowerCase()] || u.email}</option>)}
+                </select>
+              </div>
+            </div>
+            {createProjectError && <p style={{ color: '#F44336', fontSize: 13, margin: '12px 0 0' }}>{createProjectError}</p>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <button type="button" onClick={() => setShowCreateProject(false)} style={{ background: 'transparent', border: '1px solid #243F5C', borderRadius: 8, padding: '10px 20px', color: '#8A9BAD', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginRight: 10 }}>Cancel</button>
+              <button style={s.cpSave} type="submit" disabled={creatingProject}>
+                {creatingProject ? 'Creating…' : 'Create Project'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {showCalendar && (
         <CalendarModal doors={allDueSorted} onClose={() => setShowCalendar(false)} navigate={navigate} />
@@ -1047,11 +1057,12 @@ const s = {
   feedMeta:     { color: '#4A6580', fontSize: 11, marginTop: 2 },
   activityDot:  { width: 8, height: 8, borderRadius: '50%', background: '#EEFF00', flexShrink: 0 },
 
-  cpBtn:   { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
-  cpForm:  { background: '#0D1F35', borderRadius: 12, padding: '16px 18px', marginBottom: 10, border: '1px solid #1A3A5C' },
-  cpGrid:  { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 },
-  cpField: { display: 'flex', flexDirection: 'column', gap: 4 },
-  cpLabel: { color: '#8A9BAD', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' },
-  cpInput: { background: '#162840', border: '1px solid #243F5C', borderRadius: 6, padding: '8px 10px', color: '#fff', fontSize: 13, outline: 'none' },
-  cpSave:  { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 6, padding: '6px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginTop: 4 },
+  cpBtn:     { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
+  cpOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 },
+  cpModal:   { background: '#0D1F35', borderRadius: 16, padding: '28px 32px', width: '100%', maxWidth: 620, border: '1px solid #1A3A5C', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' },
+  cpGrid:    { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
+  cpField:   { display: 'flex', flexDirection: 'column', gap: 6 },
+  cpLabel:   { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' },
+  cpInput:   { background: '#162840', border: '1px solid #243F5C', borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, outline: 'none' },
+  cpSave:    { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
 }
