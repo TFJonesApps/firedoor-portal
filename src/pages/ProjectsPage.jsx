@@ -22,20 +22,19 @@ const KNOWN_ENGINEERS = {
 }
 
 const PANEL_LABELS = {
-  projects: 'Projects', activity: 'Activity Feed', recent: 'Recent Inspections',
+  projects: 'Projects', recent: 'Recent Inspections',
   remedials: 'Remedial Works', reinspection: 'Reinspection Due', workload: 'Inspector Workload',
 }
 
 const DEFAULT_LAYOUT = [
   { i: 'projects',     x: 0, y: 0,  w: 8, h: 12, minW: 2, minH: 2 },
   { i: 'recent',       x: 8, y: 0,  w: 4, h: 12, minW: 2, minH: 2 },
-  { i: 'activity',     x: 0, y: 12, w: 4, h: 8,  minW: 2, minH: 2 },
-  { i: 'remedials',    x: 4, y: 12, w: 4, h: 8,  minW: 2, minH: 2 },
-  { i: 'reinspection', x: 8, y: 12, w: 4, h: 10, minW: 2, minH: 2 },
-  { i: 'workload',     x: 0, y: 20, w: 4, h: 6,  minW: 2, minH: 2 },
+  { i: 'remedials',    x: 0, y: 12, w: 4, h: 8,  minW: 2, minH: 2 },
+  { i: 'reinspection', x: 4, y: 12, w: 4, h: 10, minW: 2, minH: 2 },
+  { i: 'workload',     x: 8, y: 12, w: 4, h: 6,  minW: 2, minH: 2 },
 ]
 
-const LAYOUT_KEY = 'dashboardLayout3'
+const LAYOUT_KEY = 'dashboardLayout4'
 
 function loadLayout() {
   try {
@@ -244,25 +243,7 @@ export default function ProjectsPage() {
     return list.slice(0, 15)
   }, [inspections, clientFilter, inspectorFilter, engineerIdToName])
 
-  // Activity feed — group by engineer_id + project + day
-  const activityFeed = useMemo(() => {
-    const map = new Map()
-    for (const ins of inspections.slice(0, 100)) {
-      const d   = new Date(ins.created_at)
-      const eid = ins.engineer_id || ins.engineer_name
-      const key = `${eid}__${ins.project_id}__${d.toDateString()}`
-      if (!map.has(key)) map.set(key, {
-        engineer:  (ins.engineer_id && engineerIdToName[ins.engineer_id]) || ins.engineer_name,
-        project:   ins.projects?.name,
-        client:    ins.projects?.client_name,
-        date:      ins.created_at,
-        projectId: ins.project_id,
-        count:     0,
-      })
-      map.get(key).count++
-    }
-    return Array.from(map.values()).slice(0, 8)
-  }, [inspections, engineerIdToName])
+
 
   // Inspector workload this month — group by engineer_id, display best name
   const inspectorWorkload = useMemo(() => {
@@ -337,22 +318,21 @@ export default function ProjectsPage() {
             <div style={{ width: 1, height: 36, background: '#fff', opacity: 0.15 }} />
             <div>
               <p style={{ color: '#fff', fontSize: 16, fontWeight: 700, margin: 0 }}>Fire Door Inspection Portal</p>
-              <p style={{ color: '#8A9BAD', fontSize: 12, margin: 0, marginTop: 2 }}>TF Jones</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                <p style={{ color: '#8A9BAD', fontSize: 12, margin: 0 }}>TF Jones</p>
+                <span style={s.liveBadge}><span style={s.liveDot} /> LIVE</span>
+              </div>
             </div>
           </div>
           <div style={s.headerRight}>
             <span style={s.userEmail}>{user?.email}</span>
-            <button style={s.btn} onClick={() => navigate('/door-history')}>Door History</button>
             <button style={s.btn} onClick={() => navigate('/users')}>Users</button>
-            <button style={s.btn} onClick={() => setShowExport(true)}>⬇ Export</button>
-            <button style={s.btn} onClick={() => { localStorage.removeItem(LAYOUT_KEY); setLayout(DEFAULT_LAYOUT) }}>Reset Layout</button>
-            <span style={s.liveBadge}><span style={s.liveDot} /> LIVE</span>
             <button style={s.btn} onClick={() => supabase.auth.signOut()}>Sign Out</button>
           </div>
         </div>
       </div>
 
-      {/* ── Stats bar ── */}
+      {/* ── Stats bar with tools ── */}
       <div style={s.statsBar}>
         <StatChip label="Total Projects"    value={projects.length}    color="#8A9BAD" />
         <div style={s.statsDivider} />
@@ -365,6 +345,9 @@ export default function ProjectsPage() {
         <StatChip label="Remedials Open"    value={remedialCount}      color={remedialCount > 0 ? '#F44336' : '#8A9BAD'} />
         <div style={s.statsDivider} />
         <StatChip label="Projects This Month" value={thisMonthCount}   color="#EEFF00" />
+        <div style={{ flex: 1 }} />
+        <button style={s.toolBtn} onClick={() => navigate('/door-history')}>🚪 Door History</button>
+        <button style={s.toolBtn} onClick={() => setShowExport(true)}>⬇ Export</button>
       </div>
 
       {/* ── Filters row ── */}
@@ -461,30 +444,7 @@ export default function ProjectsPage() {
                   </>
                 )}
 
-                {id === 'activity' && (
-                  <>
-                    <SectionTitle>Activity Feed</SectionTitle>
-                    <div style={s.panel}>
-                      {activityFeed.length === 0
-                        ? <p style={{ color: '#8A9BAD', fontSize: 13 }}>No activity yet.</p>
-                        : activityFeed.map((g, i) => (
-                          <div key={i} style={{ ...s.feedRow, cursor: g.projectId ? 'pointer' : 'default' }}
-                            onClick={() => g.projectId && navigate(`/project/${g.projectId}`)}>
-                            <div style={s.activityDot} />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 13, color: '#CBD5E1', lineHeight: 1.4 }}>
-                                <span style={{ color: '#EEFF00', fontWeight: 600 }}>{g.engineer || '—'}</span>{' '}inspected{' '}
-                                <span style={{ color: '#fff', fontWeight: 700 }}>{g.count} door{g.count !== 1 ? 's' : ''}</span>{' '}
-                                at <span style={{ color: '#fff' }}>{g.project || '—'}</span>
-                              </div>
-                              <div style={s.feedMeta}>{g.client || '—'} · {timeAgo(g.date)}</div>
-                            </div>
-                          </div>
-                        ))
-                      }
-                    </div>
-                  </>
-                )}
+
 
                 {id === 'recent' && (
                   <>
@@ -1080,6 +1040,7 @@ const s = {
   feedMeta:     { color: '#4A6580', fontSize: 11, marginTop: 2 },
   activityDot:  { width: 8, height: 8, borderRadius: '50%', background: '#EEFF00', flexShrink: 0 },
 
+  toolBtn:   { background: '#1A3A5C', border: '1px solid #243F5C', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' },
   liveBadge: { display: 'flex', alignItems: 'center', gap: 6, color: '#4CAF50', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em' },
   liveDot:   { width: 8, height: 8, borderRadius: '50%', background: '#4CAF50', display: 'inline-block', animation: 'livePulse 1.5s ease-in-out infinite' },
 
