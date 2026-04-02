@@ -159,7 +159,7 @@ export default function ProjectsPage() {
         order_number: newProject.order_number || null,
         engineer_id: newProject.engineer_id,
         engineer_name: engineerName,
-        created_at: new Date().toISOString(),
+        created_at: Date.now(),
       })
       if (error) throw error
       setShowCreateProject(false)
