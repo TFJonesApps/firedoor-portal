@@ -88,6 +88,11 @@ export default function ProjectsPage() {
   const [showCalendar,  setShowCalendar]  = useState(false)
   const [showExport,    setShowExport]    = useState(false)
   const [showArchived,  setShowArchived]  = useState(false)
+  const [showCreateProject, setShowCreateProject] = useState(false)
+  const [newProject, setNewProject] = useState({ name: '', address: '', postcode: '', client_id: '', order_number: '', engineer_id: '' })
+  const [creatingProject, setCreatingProject] = useState(false)
+  const [createProjectError, setCreateProjectError] = useState('')
+  const [inspectorUsers, setInspectorUsers] = useState([])
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -103,7 +108,7 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
-    Promise.all([fetchProjects(), fetchInspections(), fetchClients()])
+    Promise.all([fetchProjects(), fetchInspections(), fetchClients(), fetchInspectors()])
   }, [])
 
   async function fetchProjects() {
@@ -125,6 +130,44 @@ export default function ProjectsPage() {
   async function fetchClients() {
     const { data } = await supabase.from('clients').select('id, name').order('name')
     setClients(data || [])
+  }
+
+  async function fetchInspectors() {
+    const { data } = await supabase
+      .from('user_profiles')
+      .select('id, email')
+      .eq('role', 'inspector')
+      .order('email')
+    setInspectorUsers(data || [])
+  }
+
+  async function createProject(e) {
+    e.preventDefault()
+    setCreatingProject(true)
+    setCreateProjectError('')
+    try {
+      const inspector = inspectorUsers.find(u => u.id === newProject.engineer_id)
+      const engineerEmail = inspector?.email || ''
+      const engineerName = KNOWN_ENGINEERS[engineerEmail.toLowerCase()] || engineerEmail
+      const client = clients.find(c => c.id === newProject.client_id)
+      const { error } = await supabase.from('projects').insert({
+        name: newProject.name,
+        address: newProject.address || null,
+        postcode: newProject.postcode || null,
+        client_id: newProject.client_id || null,
+        client_name: client?.name || null,
+        order_number: newProject.order_number || null,
+        engineer_id: newProject.engineer_id,
+        engineer_name: engineerName,
+      })
+      if (error) throw error
+      setShowCreateProject(false)
+      setNewProject({ name: '', address: '', postcode: '', client_id: '', order_number: '', engineer_id: '' })
+      await fetchProjects()
+    } catch (err) {
+      setCreateProjectError(err.message)
+    }
+    setCreatingProject(false)
   }
 
   // Latest inspection per door (deduped)
@@ -358,6 +401,10 @@ export default function ProjectsPage() {
                       <SectionTitle>Projects</SectionTitle>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button
+                          onClick={() => { setShowCreateProject(v => !v); setCreateProjectError('') }}
+                          style={s.cpBtn}
+                        >{ showCreateProject ? 'Cancel' : '+ New Project' }</button>
+                        <button
                           onClick={() => setShowArchived(false)}
                           style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 6, border: 'none', cursor: 'pointer', background: !showArchived ? '#EEFF00' : '#1A3A5C', color: !showArchived ? '#0D1F35' : '#8A9BAD' }}
                         >Active</button>
@@ -367,6 +414,46 @@ export default function ProjectsPage() {
                         >Archived</button>
                       </div>
                     </div>
+                    {showCreateProject && (
+                      <form onSubmit={createProject} style={s.cpForm}>
+                        <div style={s.cpGrid}>
+                          <div style={s.cpField}>
+                            <label style={s.cpLabel}>Project Name *</label>
+                            <input style={s.cpInput} required placeholder="e.g. Block A Fire Doors" value={newProject.name} onChange={e => setNewProject(v => ({ ...v, name: e.target.value }))} />
+                          </div>
+                          <div style={s.cpField}>
+                            <label style={s.cpLabel}>Address</label>
+                            <input style={s.cpInput} placeholder="Site address" value={newProject.address} onChange={e => setNewProject(v => ({ ...v, address: e.target.value }))} />
+                          </div>
+                          <div style={s.cpField}>
+                            <label style={s.cpLabel}>Postcode</label>
+                            <input style={s.cpInput} placeholder="e.g. WN1 1AA" value={newProject.postcode} onChange={e => setNewProject(v => ({ ...v, postcode: e.target.value }))} />
+                          </div>
+                          <div style={s.cpField}>
+                            <label style={s.cpLabel}>Client</label>
+                            <select style={s.cpInput} value={newProject.client_id} onChange={e => setNewProject(v => ({ ...v, client_id: e.target.value }))}>
+                              <option value="">— Select Client —</option>
+                              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                          </div>
+                          <div style={s.cpField}>
+                            <label style={s.cpLabel}>Order Number</label>
+                            <input style={s.cpInput} placeholder="e.g. ORD-001" value={newProject.order_number} onChange={e => setNewProject(v => ({ ...v, order_number: e.target.value }))} />
+                          </div>
+                          <div style={s.cpField}>
+                            <label style={s.cpLabel}>Assign to Inspector *</label>
+                            <select style={s.cpInput} required value={newProject.engineer_id} onChange={e => setNewProject(v => ({ ...v, engineer_id: e.target.value }))}>
+                              <option value="">— Select Inspector —</option>
+                              {inspectorUsers.map(u => <option key={u.id} value={u.id}>{KNOWN_ENGINEERS[u.email?.toLowerCase()] || u.email}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        {createProjectError && <p style={{ color: '#F44336', fontSize: 12, margin: '8px 0 0' }}>{createProjectError}</p>}
+                        <button style={s.cpSave} type="submit" disabled={creatingProject}>
+                          {creatingProject ? 'Creating…' : 'Create Project'}
+                        </button>
+                      </form>
+                    )}
                     {loading ? <Spinner /> : filteredProjects.length === 0 ? (
                       <p style={{ color: '#8A9BAD', textAlign: 'center', padding: 40 }}>No projects found.</p>
                     ) : (
@@ -959,4 +1046,12 @@ const s = {
   feedProject:  { color: '#8A9BAD', fontSize: 12, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   feedMeta:     { color: '#4A6580', fontSize: 11, marginTop: 2 },
   activityDot:  { width: 8, height: 8, borderRadius: '50%', background: '#EEFF00', flexShrink: 0 },
+
+  cpBtn:   { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
+  cpForm:  { background: '#0D1F35', borderRadius: 12, padding: '16px 18px', marginBottom: 10, border: '1px solid #1A3A5C' },
+  cpGrid:  { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 },
+  cpField: { display: 'flex', flexDirection: 'column', gap: 4 },
+  cpLabel: { color: '#8A9BAD', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' },
+  cpInput: { background: '#162840', border: '1px solid #243F5C', borderRadius: 6, padding: '8px 10px', color: '#fff', fontSize: 13, outline: 'none' },
+  cpSave:  { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 6, padding: '6px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginTop: 4 },
 }
