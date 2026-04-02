@@ -381,8 +381,10 @@ export default function ProjectsPage() {
         <div style={s.statsDivider} />
         <StatChip label="Projects This Month" value={thisMonthCount}   color="#EEFF00" />
         <div style={{ flex: 1 }} />
-        <button style={s.toolBtn} onClick={() => navigate('/door-history')}>🚪 Door History</button>
-        <button style={s.toolBtn} onClick={() => setShowExport(true)}>⬇ Export</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button style={s.toolBtn} onClick={() => navigate('/door-history')}>Door History</button>
+          <button style={s.toolBtn} onClick={() => setShowExport(true)}>Export</button>
+        </div>
       </div>
 
       {/* ── Filters row ── */}
@@ -1121,7 +1123,7 @@ const s = {
   feedMeta:     { color: '#4A6580', fontSize: 11, marginTop: 2 },
   activityDot:  { width: 8, height: 8, borderRadius: '50%', background: '#EEFF00', flexShrink: 0 },
 
-  toolBtn:   { background: 'transparent', border: '1px solid #EEFF00', borderRadius: 8, padding: '8px 18px', color: '#EEFF00', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s' },
+  toolBtn:   { background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, padding: '8px 18px', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' },
   liveBadge: { display: 'flex', alignItems: 'center', gap: 6, color: '#4CAF50', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em' },
   liveDot:   { width: 8, height: 8, borderRadius: '50%', background: '#4CAF50', display: 'inline-block', animation: 'livePulse 1.5s ease-in-out infinite' },
 
