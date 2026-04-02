@@ -109,6 +109,19 @@ export default function ProjectsPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
     Promise.all([fetchProjects(), fetchInspections(), fetchClients(), fetchInspectors()])
+
+    // Real-time subscriptions — auto-refresh when data changes
+    const projectSub = supabase.channel('projects-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => fetchProjects())
+      .subscribe()
+    const inspectionSub = supabase.channel('inspections-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inspections' }, () => fetchInspections())
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(projectSub)
+      supabase.removeChannel(inspectionSub)
+    }
   }, [])
 
   async function fetchProjects() {
