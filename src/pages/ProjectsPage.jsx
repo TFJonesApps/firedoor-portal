@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import GridLayout from 'react-grid-layout'
 
+// Inject pulse animation for live indicator
+if (!document.getElementById('live-pulse-style')) {
+  const style = document.createElement('style')
+  style.id = 'live-pulse-style'
+  style.textContent = `@keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`
+  document.head.appendChild(style)
+}
+
 const KNOWN_ENGINEERS = {
   'lee.bates@tfjones.com': 'Lee Bates',
   'david.metcalfe@tfjones.com': 'David Metcalfe',
@@ -338,6 +346,7 @@ export default function ProjectsPage() {
             <button style={s.btn} onClick={() => navigate('/users')}>Users</button>
             <button style={s.btn} onClick={() => setShowExport(true)}>⬇ Export</button>
             <button style={s.btn} onClick={() => { localStorage.removeItem(LAYOUT_KEY); setLayout(DEFAULT_LAYOUT) }}>Reset Layout</button>
+            <span style={s.liveBadge}><span style={s.liveDot} /> LIVE</span>
             <button style={s.btn} onClick={() => supabase.auth.signOut()}>Sign Out</button>
           </div>
         </div>
@@ -1070,6 +1079,9 @@ const s = {
   feedProject:  { color: '#8A9BAD', fontSize: 12, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   feedMeta:     { color: '#4A6580', fontSize: 11, marginTop: 2 },
   activityDot:  { width: 8, height: 8, borderRadius: '50%', background: '#EEFF00', flexShrink: 0 },
+
+  liveBadge: { display: 'flex', alignItems: 'center', gap: 6, color: '#4CAF50', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em' },
+  liveDot:   { width: 8, height: 8, borderRadius: '50%', background: '#4CAF50', display: 'inline-block', animation: 'livePulse 1.5s ease-in-out infinite' },
 
   cpBtn:     { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
   cpOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 },
