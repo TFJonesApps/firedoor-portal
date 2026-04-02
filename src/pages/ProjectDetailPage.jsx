@@ -94,8 +94,10 @@ export default function ProjectDetailPage() {
 
   async function deleteProject() {
     setDeleting(true)
-    await supabase.from('inspections').delete().eq('project_id', id)
-    await supabase.from('projects').delete().eq('id', id)
+    const { error: insErr } = await supabase.from('inspections').delete().eq('project_id', id)
+    if (insErr) { alert('Failed to delete inspections: ' + insErr.message); setDeleting(false); return }
+    const { error: projErr } = await supabase.from('projects').delete().eq('id', id)
+    if (projErr) { alert('Failed to delete project: ' + projErr.message); setDeleting(false); return }
     navigate('/')
   }
 
