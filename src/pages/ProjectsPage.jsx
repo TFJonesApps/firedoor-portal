@@ -100,6 +100,10 @@ export default function ProjectsPage() {
   const [creatingProject, setCreatingProject] = useState(false)
   const [createProjectError, setCreateProjectError] = useState('')
   const [inspectorUsers, setInspectorUsers] = useState([])
+  const [showReinspect, setShowReinspect] = useState(null)
+  const [reinspectOrder, setReinspectOrder] = useState('')
+  const [reinspectEngineerId, setReinspectEngineerId] = useState('')
+  const [creatingReinspect, setCreatingReinspect] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -189,6 +193,37 @@ export default function ProjectsPage() {
       setCreateProjectError(err.message)
     }
     setCreatingProject(false)
+  }
+
+  async function createReinspection(e) {
+    e.preventDefault()
+    if (!showReinspect) return
+    setCreatingReinspect(true)
+    try {
+      const src = showReinspect
+      const inspector = inspectorUsers.find(u => u.id === reinspectEngineerId)
+      const engineerEmail = inspector?.email || ''
+      const engineerName = KNOWN_ENGINEERS[engineerEmail.toLowerCase()] || engineerEmail
+      const { error } = await supabase.from('projects').insert({
+        name: `${src.name} (Reinspection)`,
+        address: src.address || null,
+        postcode: src.postcode || null,
+        client_id: src.client_id || null,
+        client_name: src.client_name || null,
+        order_number: reinspectOrder || null,
+        engineer_id: reinspectEngineerId,
+        engineer_name: engineerName,
+        created_at: Date.now(),
+      })
+      if (error) throw error
+      setShowReinspect(null)
+      setReinspectOrder('')
+      setReinspectEngineerId('')
+      await fetchProjects()
+    } catch (err) {
+      alert('Failed to create reinspection: ' + err.message)
+    }
+    setCreatingReinspect(false)
   }
 
   // Latest inspection per door (deduped)
@@ -425,7 +460,7 @@ export default function ProjectsPage() {
                     ) : (
                       <div style={s.tableWrap}>
                         <table style={s.table}>
-                          <thead><tr>{['Project','Address','Client','Order No.','Inspector','Created'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+                          <thead><tr>{['Project','Address','Client','Order No.','Inspector','Created',''].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
                           <tbody>
                             {filteredProjects.map(p => (
                               <tr key={p.id} style={s.row} onClick={() => navigate(`/project/${p.id}`, { state: { project: p } })}>
@@ -435,6 +470,11 @@ export default function ProjectsPage() {
                                 <td style={s.td}><span style={{ color: '#CBD5E1' }}>{p.order_number || '—'}</span></td>
                                 <td style={s.td}><span style={{ color: '#fff', fontWeight: 500 }}>{(p.engineer_id && engineerIdToName[p.engineer_id]) || KNOWN_ENGINEERS[p.engineer_name?.toLowerCase()] || (p.engineer_name?.includes('@') ? '—' : p.engineer_name) || '—'}</span></td>
                                 <td style={s.td}><span style={{ color: '#94A3B8' }}>{new Date(p.created_at).toLocaleDateString('en-GB')}</span></td>
+                                <td style={s.td}>
+                                  <button style={s.reinspectBtn} onClick={e => { e.stopPropagation(); setShowReinspect(p); setReinspectEngineerId(p.engineer_id || ''); setReinspectOrder('') }}>
+                                    Reinspect
+                                  </button>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -533,6 +573,47 @@ export default function ProjectsPage() {
             ))}
         </GridLayout>
       </div>
+
+      {showReinspect && (
+        <div style={s.cpOverlay} onClick={() => setShowReinspect(null)}>
+          <form onSubmit={createReinspection} style={s.cpModal} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Reinspect Project</h2>
+              <button type="button" onClick={() => setShowReinspect(null)} style={{ background: 'none', border: 'none', color: '#8A9BAD', fontSize: 22, cursor: 'pointer', padding: '0 4px' }}>&times;</button>
+            </div>
+            <p style={{ color: '#8A9BAD', fontSize: 13, margin: '0 0 16px' }}>
+              Create a new reinspection project for <span style={{ color: '#EEFF00', fontWeight: 700 }}>{showReinspect.name}</span> with the same site details and door list ready to go.
+            </p>
+            <div style={s.cpGrid}>
+              <div style={s.cpField}>
+                <label style={s.cpLabel}>Source Project</label>
+                <input style={{ ...s.cpInput, opacity: 0.6 }} value={showReinspect.name} disabled />
+              </div>
+              <div style={s.cpField}>
+                <label style={s.cpLabel}>Site Address</label>
+                <input style={{ ...s.cpInput, opacity: 0.6 }} value={[showReinspect.address, showReinspect.postcode].filter(Boolean).join(', ') || '—'} disabled />
+              </div>
+              <div style={s.cpField}>
+                <label style={s.cpLabel}>New Order Number *</label>
+                <input style={s.cpInput} required placeholder="e.g. ORD-12345" value={reinspectOrder} onChange={e => setReinspectOrder(e.target.value)} />
+              </div>
+              <div style={s.cpField}>
+                <label style={s.cpLabel}>Assign to Inspector *</label>
+                <select style={s.cpInput} required value={reinspectEngineerId} onChange={e => setReinspectEngineerId(e.target.value)}>
+                  <option value="">— Select Inspector —</option>
+                  {inspectorUsers.map(u => <option key={u.id} value={u.id}>{KNOWN_ENGINEERS[u.email?.toLowerCase()] || u.email}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <button type="button" onClick={() => setShowReinspect(null)} style={{ background: 'transparent', border: '1px solid #243F5C', borderRadius: 8, padding: '10px 20px', color: '#8A9BAD', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginRight: 10 }}>Cancel</button>
+              <button style={s.cpSave} type="submit" disabled={creatingReinspect}>
+                {creatingReinspect ? 'Creating…' : 'Create Reinspection'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {showCreateProject && (
         <div style={s.cpOverlay} onClick={() => setShowCreateProject(false)}>
@@ -1040,9 +1121,11 @@ const s = {
   feedMeta:     { color: '#4A6580', fontSize: 11, marginTop: 2 },
   activityDot:  { width: 8, height: 8, borderRadius: '50%', background: '#EEFF00', flexShrink: 0 },
 
-  toolBtn:   { background: '#1A3A5C', border: '1px solid #243F5C', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' },
+  toolBtn:   { background: 'transparent', border: '1px solid #EEFF00', borderRadius: 8, padding: '8px 18px', color: '#EEFF00', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s' },
   liveBadge: { display: 'flex', alignItems: 'center', gap: 6, color: '#4CAF50', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em' },
   liveDot:   { width: 8, height: 8, borderRadius: '50%', background: '#4CAF50', display: 'inline-block', animation: 'livePulse 1.5s ease-in-out infinite' },
+
+  reinspectBtn: { background: 'transparent', border: '1px solid #EEFF00', borderRadius: 6, padding: '4px 10px', color: '#EEFF00', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s' },
 
   cpBtn:     { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
   cpOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 },
