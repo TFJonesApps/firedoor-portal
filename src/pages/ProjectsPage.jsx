@@ -214,6 +214,7 @@ export default function ProjectsPage() {
         engineer_id: reinspectEngineerId,
         engineer_name: engineerName,
         created_at: Date.now(),
+        source_project_id: src.id,
       })
       if (error) throw error
       setShowReinspect(null)
