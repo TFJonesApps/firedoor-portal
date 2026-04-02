@@ -39,6 +39,7 @@ export default function UsersPage() {
 
   async function callFunction(body) {
     const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Not logged in — please sign in again')
     const res = await fetch(FUNCTION_URL, {
       method: 'POST',
       headers: {
@@ -50,7 +51,7 @@ export default function UsersPage() {
     const text = await res.text()
     let json
     try { json = JSON.parse(text) } catch { throw new Error(text || `Request failed (${res.status})`) }
-    if (!res.ok) throw new Error(json.error || 'Request failed')
+    if (!res.ok) throw new Error(json.error || json.message || `Request failed (${res.status})`)
     return json
   }
 
