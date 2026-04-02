@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
-const FUNCTION_URL = 'https://ztagewwelwgrhmibikcv.supabase.co/functions/v1/create-user'
-
 export default function UsersPage() {
   const navigate = useNavigate()
   const [users, setUsers]     = useState([])
@@ -38,22 +36,10 @@ export default function UsersPage() {
   }
 
   async function callFunction(body) {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) throw new Error('Not logged in — please sign in again')
-    const res = await fetch(FUNCTION_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp0YWdld3dlbHdncmhtaWJpa2N2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTMzNDQsImV4cCI6MjA5MDAyOTM0NH0.cC8_Ltldb4fRB9nHNCNCZIN2N7R_cD1WIFP6oMVyrG8',
-      },
-      body: JSON.stringify(body),
-    })
-    const text = await res.text()
-    let json
-    try { json = JSON.parse(text) } catch { throw new Error(text || `Request failed (${res.status})`) }
-    if (!res.ok) throw new Error(json.error || json.message || `Request failed (${res.status})`)
-    return json
+    const { data, error } = await supabase.functions.invoke('create-user', { body })
+    if (error) throw new Error(error.message || 'Request failed')
+    if (data?.error) throw new Error(data.error)
+    return data
   }
 
   async function createUser(e) {
