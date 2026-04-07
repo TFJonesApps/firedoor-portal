@@ -11,6 +11,14 @@ export default function ClientScanPage() {
   const [status, setStatus]   = useState('idle')   // idle | scanning | found | error
   const [error, setError]     = useState('')
   const [user, setUser]       = useState(null)
+  const [manualMode, setManualMode] = useState(false)
+  const [manualCode, setManualCode] = useState('')
+
+  function submitManual() {
+    const code = manualCode.trim()
+    if (!code) return
+    navigate(`/client/door/${encodeURIComponent(code)}`)
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
@@ -87,7 +95,7 @@ export default function ClientScanPage() {
         </div>
 
         {/* Idle state */}
-        {!isScanning && (
+        {!isScanning && !manualMode && (
           <div style={s.idleBox}>
             <div style={s.barcodeIcon}>
               <BarcodeIcon />
@@ -96,13 +104,53 @@ export default function ClientScanPage() {
           </div>
         )}
 
+        {/* Manual entry */}
+        {!isScanning && manualMode && (
+          <div style={s.idleBox}>
+            <p style={{ ...s.idleText, color: '#fff', fontWeight: 600 }}>Enter barcode manually</p>
+            <input
+              type="text"
+              value={manualCode}
+              onChange={(e) => setManualCode(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') submitManual() }}
+              placeholder="e.g. 123456789"
+              autoFocus
+              style={s.manualInput}
+            />
+            <p style={{ ...s.idleText, fontSize: 12 }}>Use this if the barcode is damaged or unreadable</p>
+          </div>
+        )}
+
         {error && <p style={s.error}>{error}</p>}
 
         {/* Action button */}
         {!isScanning ? (
-          <button style={s.scanBtn} onClick={startScan}>
-            📷  Start Scanning
-          </button>
+          manualMode ? (
+            <>
+              <button
+                style={{ ...s.scanBtn, opacity: manualCode.trim() ? 1 : 0.5 }}
+                onClick={submitManual}
+                disabled={!manualCode.trim()}
+              >
+                Submit Code
+              </button>
+              <button
+                style={s.linkBtn}
+                onClick={() => { setManualMode(false); setManualCode('') }}
+              >
+                ← Back to scanner
+              </button>
+            </>
+          ) : (
+            <>
+              <button style={s.scanBtn} onClick={startScan}>
+                📷  Start Scanning
+              </button>
+              <button style={s.linkBtn} onClick={() => setManualMode(true)}>
+                Enter code manually
+              </button>
+            </>
+          )
         ) : (
           <button style={{ ...s.scanBtn, background: 'transparent', border: '2px solid #fff', color: '#fff' }} onClick={stopScan}>
             ✕  Cancel
@@ -143,4 +191,6 @@ const s = {
   barcodeIcon:{ opacity: 0.6 },
   error:      { color: '#F44336', fontSize: 14, textAlign: 'center', maxWidth: 320 },
   scanBtn:    { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 14, padding: '18px 48px', fontSize: 17, fontWeight: 700, width: '100%', maxWidth: 380 },
+  linkBtn:    { background: 'transparent', border: 'none', color: '#EEFF00', fontSize: 14, fontWeight: 600, padding: '8px 16px', cursor: 'pointer', textDecoration: 'underline' },
+  manualInput:{ width: '100%', background: '#0D1F35', border: '2px solid #1A3A5C', borderRadius: 10, padding: '14px 16px', color: '#fff', fontSize: 18, fontWeight: 600, textAlign: 'center', letterSpacing: '0.05em', outline: 'none', boxSizing: 'border-box' },
 }
