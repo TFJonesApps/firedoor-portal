@@ -101,6 +101,7 @@ export default function ProjectsPage() {
   const [createProjectError, setCreateProjectError] = useState('')
   const [inspectorUsers, setInspectorUsers] = useState([])
   const [showProjectsExpanded, setShowProjectsExpanded] = useState(false)
+  const [showWhatsNew, setShowWhatsNew] = useState(false)
   const [expandedClientFilter, setExpandedClientFilter] = useState('')
   const [expandedInspectorFilter, setExpandedInspectorFilter] = useState('')
   const [expandedSearch, setExpandedSearch] = useState('')
@@ -414,6 +415,7 @@ export default function ProjectsPage() {
           </div>
           <div style={s.headerRight}>
             <span style={s.userEmail}>{user?.email}</span>
+            <button style={s.btn} onClick={() => setShowWhatsNew(true)}>What's New</button>
             <button style={s.btn} onClick={() => navigate('/users')}>Users</button>
             <button style={s.btn} onClick={() => supabase.auth.signOut()}>Sign Out</button>
           </div>
@@ -816,6 +818,67 @@ export default function ProjectsPage() {
       )}
       {showExport && (
         <ExportModal onClose={() => setShowExport(false)} />
+      )}
+
+      {showWhatsNew && (
+        <div style={s.cpOverlay} onClick={() => setShowWhatsNew(false)}>
+          <div style={{ background: '#0D1F35', borderRadius: 16, padding: '32px 36px', width: '90vw', maxWidth: 640, border: '1px solid #1A3A5C', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', position: 'relative', maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowWhatsNew(false)} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', color: '#EEFF00', fontSize: 32, lineHeight: 1, cursor: 'pointer', padding: '4px 8px', fontWeight: 300 }}>&times;</button>
+            <h2 style={{ color: '#EEFF00', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>Fire Door Inspection Portal</h2>
+            <p style={{ color: '#8A9BAD', fontSize: 13, margin: '0 0 24px' }}>Here's a quick guide to what you can do</p>
+
+            {[
+              {
+                icon: '📋',
+                title: 'Projects Dashboard',
+                desc: 'Your home screen shows all active projects at a glance. Use the Active / Completed / Archived tabs to filter, or click View All to open the full searchable project list. Click any project row to dive into its detail.'
+              },
+              {
+                icon: '🚪',
+                title: 'Door Inspections',
+                desc: 'Each project contains a list of fire doors. Inspectors log pass/fail results, attach photos, and record findings per door. The pass rate is calculated automatically and shown on the dashboard.'
+              },
+              {
+                icon: '🔁',
+                title: 'Reinspections',
+                desc: 'Hit Reinspect on any project to instantly create a new reinspection job with the same site details and door list pre-loaded — no duplicate data entry needed.'
+              },
+              {
+                icon: '🛠️',
+                title: 'Remedial Works',
+                desc: 'Any failed doors automatically generate remedial work items. The Remedial Works panel tracks what\'s outstanding so nothing slips through the cracks.'
+              },
+              {
+                icon: '📅',
+                title: 'Reinspection Due',
+                desc: 'The Reinspection Due panel shows upcoming scheduled revisits sorted by date. Click Calendar to see them in a monthly view and plan your workload ahead of time.'
+              },
+              {
+                icon: '📊',
+                title: 'Export',
+                desc: 'Use the Export button to download your inspection data. Great for sending reports to clients or keeping records off-platform.'
+              },
+              {
+                icon: '🕐',
+                title: 'Door History',
+                desc: 'Door History gives you a full audit trail across all projects — search any door to see every inspection it\'s ever had.'
+              },
+              {
+                icon: '👥',
+                title: 'Users',
+                desc: 'Manage your team from the Users screen. Add inspectors, update details, and control who has access to the portal.'
+              },
+            ].map(({ icon, title, desc }) => (
+              <div key={title} style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
+                <span style={{ fontSize: 22, lineHeight: 1, marginTop: 2, flexShrink: 0 }}>{icon}</span>
+                <div>
+                  <p style={{ color: '#EEFF00', fontSize: 13, fontWeight: 700, margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</p>
+                  <p style={{ color: '#CBD5E1', fontSize: 13, margin: 0, lineHeight: 1.6 }}>{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   )
