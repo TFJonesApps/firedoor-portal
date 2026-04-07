@@ -309,7 +309,7 @@ const s = {
   headerLeft:      { display: 'flex', alignItems: 'center' },
   headerRight:     { display: 'flex', alignItems: 'center', gap: 12 },
   logo:            { height: 42, objectFit: 'contain' },
-  backBtn:         { background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, padding: '7px 14px', color: '#fff', fontSize: 13, cursor: 'pointer' },
+  backBtn:         { background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '7px 14px', color: '#EEFF00', fontSize: 13, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' },
   body:            { padding: '32px 28px', maxWidth: 1100, margin: '0 auto' },
   title:           { color: '#fff', fontSize: 26, fontWeight: 800, margin: 0 },
   createBtn:       { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },

@@ -336,7 +336,7 @@ const s = {
   page:        { minHeight: '100vh', background: '#0D1F35', display: 'flex', flexDirection: 'column' },
   header:      { background: '#0D1F35', padding: '0 32px', borderBottom: '3px solid #EEFF00' },
   headerInner: { maxWidth: 1600, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 0' },
-  btn:         { background: '#162840', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+  btn:         { background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '8px 16px', color: '#EEFF00', fontSize: 13, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' },
   body:        { flex: 1, maxWidth: 960, width: '100%', margin: '0 auto', padding: '24px 24px' },
 
   searchBar:   { display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' },
