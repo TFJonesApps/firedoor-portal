@@ -510,7 +510,7 @@ export default function ProjectsPage({ role }) {
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <button onClick={() => { setShowProjectsExpanded(true); setExpandedSearch(''); setExpandedClientFilter(''); setExpandedInspectorFilter('') }} style={{ background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '3px 10px', color: '#EEFF00', fontSize: 10, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }} title="View all projects">View All</button>
+                        <button onClick={() => { setShowProjectsExpanded(true); setExpandedSearch(''); setExpandedClientFilter(''); setExpandedInspectorFilter('') }} style={{ background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '4px 12px', color: '#EEFF00', fontSize: 11, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }} title="View all projects">View All</button>
                         <button
                           onClick={() => { setShowCreateProject(v => !v); setCreateProjectError('') }}
                           style={s.cpBtn}
