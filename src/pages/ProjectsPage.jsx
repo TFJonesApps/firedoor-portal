@@ -473,7 +473,7 @@ export default function ProjectsPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <SectionTitle>Projects</SectionTitle>
-                        <button onClick={() => { setShowProjectsExpanded(true); setExpandedSearch(''); setExpandedClientFilter(''); setExpandedInspectorFilter('') }} style={{ background: 'none', border: '1px solid #243F5C', borderRadius: 4, padding: '2px 6px', color: '#8A9BAD', fontSize: 10, cursor: 'pointer' }} title="Expand">⛶</button>
+                        <button onClick={() => { setShowProjectsExpanded(true); setExpandedSearch(''); setExpandedClientFilter(''); setExpandedInspectorFilter('') }} style={{ background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '3px 10px', color: '#EEFF00', fontSize: 10, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }} title="View all projects">View All</button>
                       </div>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button
