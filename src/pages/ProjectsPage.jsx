@@ -1242,6 +1242,7 @@ const s = {
   cpBtn:     { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
   cpOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 },
   cpModal:   { background: '#0D1F35', borderRadius: 16, padding: '28px 32px', width: '100%', maxWidth: 620, border: '1px solid #1A3A5C', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' },
+  expandedModal: { background: '#0D1F35', borderRadius: 16, padding: '24px 28px', width: '95vw', maxWidth: 1600, height: '90vh', display: 'flex', flexDirection: 'column', border: '1px solid #1A3A5C', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' },
   cpGrid:    { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
   cpField:   { display: 'flex', flexDirection: 'column', gap: 6 },
   cpLabel:   { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' },
