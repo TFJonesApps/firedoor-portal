@@ -280,8 +280,17 @@ export default function ProjectsPage() {
       if (i.engineer_name === inspectorFilter) return true
       return i.engineer_id && engineerIdToName[i.engineer_id] === inspectorFilter
     })
+    const q = search.toLowerCase().trim()
+    if (q) list = list.filter(i =>
+      i.door_location?.toLowerCase().includes(q)         ||
+      i.projects?.name?.toLowerCase().includes(q)        ||
+      i.projects?.address?.toLowerCase().includes(q)     ||
+      i.projects?.postcode?.toLowerCase().includes(q)    ||
+      i.projects?.client_name?.toLowerCase().includes(q) ||
+      i.engineer_name?.toLowerCase().includes(q)
+    )
     return list.slice(0, 15)
-  }, [inspections, clientFilter, inspectorFilter, engineerIdToName])
+  }, [inspections, clientFilter, inspectorFilter, engineerIdToName, search])
 
 
 
@@ -340,6 +349,11 @@ export default function ProjectsPage() {
     if (projectTab === 'active'    && (archived || completed)) return false
     if (projectTab === 'completed' && !completed) return false
     if (projectTab === 'archived'  && !archived) return false
+    if (clientFilter && p.client_name !== clientFilter) return false
+    if (inspectorFilter) {
+      const name = (p.engineer_id && engineerIdToName[p.engineer_id]) || p.engineer_name || ''
+      if (name !== inspectorFilter) return false
+    }
     const q = search.toLowerCase()
     return !q ||
       p.name?.toLowerCase().includes(q)          ||
@@ -399,17 +413,29 @@ export default function ProjectsPage() {
 
       {/* ── Stats bar with tools ── */}
       <div style={s.statsBar}>
-        <StatChip label="Total Projects"    value={projects.length}    color="#8A9BAD" />
+        <StatChip label="Total Projects"    value={projects.length}    color="#8A9BAD"
+          onClick={() => { setProjectTab('active'); setShowProjectsExpanded(true); setExpandedSearch(''); setExpandedClientFilter(''); setExpandedInspectorFilter('') }}
+          title="View all projects" />
         <div style={s.statsDivider} />
-        <StatChip label="Total Doors"       value={totalDoors}         color="#fff" />
+        <StatChip label="Total Doors"       value={totalDoors}         color="#fff"
+          onClick={() => navigate('/door-history')}
+          title="Open door history" />
         <div style={s.statsDivider} />
-        <StatChip label="Pass Rate"         value={`${passRate}%`}     color="#4CAF50" />
+        <StatChip label="Pass Rate"         value={`${passRate}%`}     color="#4CAF50"
+          onClick={() => navigate('/door-history')}
+          title="Open door history" />
         <div style={s.statsDivider} />
-        <StatChip label="Due / Overdue"     value={dueCount}           color={dueCount     > 0 ? '#FF9800' : '#8A9BAD'} />
+        <StatChip label="Due / Overdue"     value={dueCount}           color={dueCount     > 0 ? '#FF9800' : '#8A9BAD'}
+          onClick={() => { const el = document.getElementById('panel-reinspection'); el?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }}
+          title="Jump to reinspections due" />
         <div style={s.statsDivider} />
-        <StatChip label="Remedials Open"    value={remedialCount}      color={remedialCount > 0 ? '#F44336' : '#8A9BAD'} />
+        <StatChip label="Remedials Open"    value={remedialCount}      color={remedialCount > 0 ? '#F44336' : '#8A9BAD'}
+          onClick={() => { const el = document.getElementById('panel-remedials'); el?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }}
+          title="Jump to remedial works" />
         <div style={s.statsDivider} />
-        <StatChip label="Projects This Month" value={thisMonthCount}   color="#EEFF00" />
+        <StatChip label="Projects This Month" value={thisMonthCount}   color="#EEFF00"
+          onClick={() => { setProjectTab('active'); setShowProjectsExpanded(true); setExpandedSearch(''); setExpandedClientFilter(''); setExpandedInspectorFilter('') }}
+          title="View projects" />
         <div style={{ flex: 1 }} />
         <div style={{ display: 'flex', gap: 10 }}>
           <button style={s.toolBtn} onClick={() => navigate('/door-history')}>Door History</button>
@@ -450,7 +476,7 @@ export default function ProjectsPage() {
           isDraggable
         >
             {layout.map(({ i: id }) => (
-              <div key={id} style={{ background: '#162840', borderRadius: 12, border: '1px solid rgba(255,255,255,0.18)', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%' }}>
+              <div key={id} id={`panel-${id}`} style={{ background: '#162840', borderRadius: 12, border: '1px solid rgba(255,255,255,0.18)', display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%' }}>
                 {/* Panel header with drag handle */}
                 <div className="panel-drag-handle" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.12)', cursor: 'grab', background: '#0D1F35', flexShrink: 0 }}>
                   <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
@@ -822,9 +848,23 @@ function PassBadge({ passed }) {
   )
 }
 
-function StatChip({ label, value, color }) {
+function StatChip({ label, value, color, onClick, title }) {
+  const clickable = typeof onClick === 'function'
   return (
-    <div style={{ textAlign: 'center', flex: 1 }}>
+    <div
+      onClick={clickable ? onClick : undefined}
+      title={title || (clickable ? 'Click to view' : undefined)}
+      style={{
+        textAlign: 'center',
+        flex: 1,
+        cursor: clickable ? 'pointer' : 'default',
+        padding: '4px 6px',
+        borderRadius: 8,
+        transition: 'background 0.15s',
+      }}
+      onMouseEnter={clickable ? e => (e.currentTarget.style.background = 'rgba(238,255,0,0.06)') : undefined}
+      onMouseLeave={clickable ? e => (e.currentTarget.style.background = 'transparent') : undefined}
+    >
       <div style={{ fontSize: 28, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
       <div style={{ fontSize: 11, color: '#8A9BAD', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
     </div>
