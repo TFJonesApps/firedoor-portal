@@ -822,11 +822,16 @@ export default function ProjectsPage({ role }) {
       )}
 
       {showWhatsNew && (
-        <div style={s.cpOverlay} onClick={() => setShowWhatsNew(false)}>
-          <div style={{ background: '#0D1F35', borderRadius: 16, padding: '32px 36px', width: '90vw', maxWidth: 640, border: '1px solid #1A3A5C', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', position: 'relative', maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowWhatsNew(false)} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', color: '#EEFF00', fontSize: 32, lineHeight: 1, cursor: 'pointer', padding: '4px 8px', fontWeight: 300 }}>&times;</button>
-            <h2 style={{ color: '#EEFF00', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>Fire Door Inspection Portal</h2>
-            <p style={{ color: '#8A9BAD', fontSize: 13, margin: '0 0 24px' }}>Here's a quick guide to what you can do</p>
+        <div style={{ ...s.cpOverlay, overscrollBehavior: 'contain' }} onClick={() => setShowWhatsNew(false)}>
+          <div style={{ background: '#0D1F35', borderRadius: 16, width: '90vw', maxWidth: 640, border: '1px solid #1A3A5C', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', position: 'relative', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+            {/* Fixed header */}
+            <div style={{ padding: '28px 36px 16px', flexShrink: 0, borderBottom: '1px solid #1A3A5C' }}>
+              <button onClick={() => setShowWhatsNew(false)} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', color: '#EEFF00', fontSize: 32, lineHeight: 1, cursor: 'pointer', padding: '4px 8px', fontWeight: 300 }}>&times;</button>
+              <h2 style={{ color: '#EEFF00', fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>Fire Door Inspection Portal</h2>
+              <p style={{ color: '#8A9BAD', fontSize: 13, margin: 0 }}>Here's a quick guide to what you can do</p>
+            </div>
+            {/* Scrollable content */}
+            <div style={{ overflowY: 'auto', padding: '20px 36px 28px', overscrollBehavior: 'contain' }}>
 
             {[
               {
@@ -878,6 +883,7 @@ export default function ProjectsPage({ role }) {
                 </div>
               </div>
             ))}
+            </div>{/* end scrollable content */}
           </div>
         </div>
       )}
@@ -1352,7 +1358,7 @@ const s = {
   reinspectBtn: { background: 'transparent', border: '1px solid #EEFF00', borderRadius: 6, padding: '4px 10px', color: '#EEFF00', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s' },
 
   cpBtn:     { background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '4px 12px', color: '#EEFF00', fontSize: 11, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' },
-  cpOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 },
+  cpOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, overflow: 'hidden' },
   cpModal:   { background: '#0D1F35', borderRadius: 16, padding: '28px 32px', width: '100%', maxWidth: 620, border: '1px solid #1A3A5C', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' },
   expandedModal: { background: '#0D1F35', borderRadius: 16, padding: '24px 28px', width: '95vw', maxWidth: 1600, height: '90vh', display: 'flex', flexDirection: 'column', border: '1px solid #1A3A5C', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' },
   cpGrid:    { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },

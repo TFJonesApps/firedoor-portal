@@ -182,6 +182,7 @@ export default function UsersPage() {
                   onChange={e => setNewUser(v => ({ ...v, role: e.target.value, client_id: '' }))}
                 >
                   <option value="admin">Admin</option>
+                  <option value="user">User</option>
                   <option value="inspector">Inspector</option>
                   <option value="client">Client</option>
                 </select>
@@ -236,6 +237,7 @@ export default function UsersPage() {
                       <td style={s.td}>
                         <select style={s.select} value={edit.role || 'client'} onChange={e => setField(user.id, 'role', e.target.value)}>
                           <option value="admin">Admin</option>
+                          <option value="user">User</option>
                           <option value="inspector">Inspector</option>
                           <option value="client">Client</option>
                         </select>
