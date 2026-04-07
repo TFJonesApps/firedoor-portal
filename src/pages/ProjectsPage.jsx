@@ -646,10 +646,11 @@ export default function ProjectsPage() {
 
       {showProjectsExpanded && (
         <div style={s.cpOverlay} onClick={() => setShowProjectsExpanded(false)}>
-          <div style={s.expandedModal} onClick={e => e.stopPropagation()}>
+          <div style={{ ...s.expandedModal, position: 'relative' }} onClick={e => e.stopPropagation()}>
+            <button type="button" onClick={() => setShowProjectsExpanded(false)} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', color: '#EEFF00', fontSize: 32, lineHeight: 1, cursor: 'pointer', padding: '4px 8px', fontWeight: 300 }}>&times;</button>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Projects</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingRight: 40 }}>
                 <button
                   onClick={() => { setShowProjectsExpanded(false); setShowCreateProject(true); setCreateProjectError('') }}
                   style={s.cpBtn}
@@ -660,7 +661,6 @@ export default function ProjectsPage() {
                     style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 4, border: '1px solid #EEFF00', cursor: 'pointer', background: projectTab === tab ? '#EEFF00' : 'none', color: projectTab === tab ? '#0D1F35' : '#EEFF00', textTransform: 'uppercase', letterSpacing: '0.05em' }}
                   >{tab}</button>
                 ))}
-                <button type="button" onClick={() => setShowProjectsExpanded(false)} style={{ background: 'none', border: 'none', color: '#8A9BAD', fontSize: 22, cursor: 'pointer', padding: '0 4px' }}>&times;</button>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
