@@ -171,9 +171,13 @@ export default function ProjectDetailPage() {
     setExportingCsv(false)
   }
 
-  const passCount     = inspections.filter(i => i.inspection_passed === 'Pass').length
-  const failCount     = inspections.filter(i => i.inspection_passed === 'Fail').length
-  const actionedCount = inspections.filter(i => i.remedial_actioned).length
+  const passCount      = inspections.filter(i => i.inspection_passed === 'Pass').length
+  const failCount      = inspections.filter(i => i.inspection_passed === 'Fail').length
+  const actionedCount  = inspections.filter(i => i.remedial_actioned).length
+  const hasRepairJobs  = inspections.some(i =>
+    i.inspection_passed === 'Fail' &&
+    (i.recommended_action?.toLowerCase().includes('repair') || i.remedial_works_completed)
+  )
   const passRate      = inspections.length > 0 ? Math.round((passCount / inspections.length) * 100) : null
   const lastInspected = inspections[0] ? new Date(inspections[0].created_at).toLocaleDateString('en-GB') : null
 
@@ -307,11 +311,13 @@ export default function ProjectDetailPage() {
                 onClick={async () => { setGeneratingPdf(true); try { await generateProjectReport(project, inspections) } catch(e) { console.error(e) } setGeneratingPdf(false) }}>
                 {generatingPdf ? 'Generating…' : '⬇ PDF'}
               </button>
-              <button style={{ ...styles.editBtn, background: '#1A3A5C', border: '1px solid #4CAF50', color: '#4CAF50', opacity: exportingCsv ? 0.6 : 1 }}
-                disabled={exportingCsv || inspections.length === 0}
-                onClick={exportCsv}>
-                {exportingCsv ? 'Exporting…' : '⬇ CSV'}
-              </button>
+              {hasRepairJobs && (
+                <button style={{ ...styles.editBtn, background: '#1A3A5C', border: '1px solid #4CAF50', color: '#4CAF50', opacity: exportingCsv ? 0.6 : 1 }}
+                  disabled={exportingCsv}
+                  onClick={exportCsv}>
+                  {exportingCsv ? 'Exporting…' : '⬇ CSV'}
+                </button>
+              )}
               <button style={{ ...styles.editBtn, background: project?.is_published ? '#1A3A2A' : '#1A2A3A', border: `1px solid ${project?.is_published ? '#4CAF50' : '#8A9BAD'}`, color: project?.is_published ? '#4CAF50' : '#8A9BAD', opacity: publishing ? 0.6 : 1 }}
                 disabled={publishing || inspections.length === 0}
                 onClick={async () => {
