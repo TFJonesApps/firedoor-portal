@@ -52,21 +52,25 @@ export default function App() {
   }
 
   const isAdmin     = session && role === 'admin'
+  const isUser      = session && role === 'user'
   const isInspector = session && role === 'inspector'
   const isClient    = session && role === 'client'
+  const isPortalUser = isAdmin || isUser   // has access to main portal
 
   // Where to send a logged-in user based on role
-  const roleHome = isAdmin ? '/' : isInspector ? '/inspector' : '/client/scan'
+  const roleHome = isPortalUser ? '/' : isInspector ? '/inspector' : '/client/scan'
 
   return (
     <BrowserRouter>
       <Routes>
-        {/* Admin routes — admins only */}
+        {/* Admin + User routes */}
         <Route path="/login"       element={!session ? <LoginPage />         : <Navigate to={roleHome} />} />
-        <Route path="/"            element={isAdmin  ? <ProjectsPage />      : <Navigate to={session ? roleHome : '/login'} />} />
-        <Route path="/project/:id" element={isAdmin  ? <ProjectDetailPage /> : <Navigate to={session ? roleHome : '/login'} />} />
-        <Route path="/users"        element={isAdmin  ? <UsersPage />         : <Navigate to={session ? roleHome : '/login'} />} />
-        <Route path="/door-history" element={isAdmin  ? <DoorHistoryPage />   : <Navigate to={session ? roleHome : '/login'} />} />
+        <Route path="/"            element={isPortalUser ? <ProjectsPage role={role} />      : <Navigate to={session ? roleHome : '/login'} />} />
+        <Route path="/project/:id" element={isPortalUser ? <ProjectDetailPage /> : <Navigate to={session ? roleHome : '/login'} />} />
+        <Route path="/door-history" element={isPortalUser ? <DoorHistoryPage />   : <Navigate to={session ? roleHome : '/login'} />} />
+
+        {/* Admin only */}
+        <Route path="/users" element={isAdmin ? <UsersPage /> : <Navigate to={session ? roleHome : '/login'} />} />
 
         {/* Inspector landing */}
         <Route path="/inspector" element={isInspector ? <InspectorPage /> : <Navigate to={session ? roleHome : '/login'} />} />

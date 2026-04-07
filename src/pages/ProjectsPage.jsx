@@ -81,7 +81,8 @@ function timeAgo(dateStr) {
   return 'just now'
 }
 
-export default function ProjectsPage() {
+export default function ProjectsPage({ role }) {
+  const isAdmin = role === 'admin'
   const [projects,         setProjects]         = useState([])
   const [inspections,      setInspections]      = useState([])
   const [clients,          setClients]          = useState([])
@@ -416,7 +417,7 @@ export default function ProjectsPage() {
           <div style={s.headerRight}>
             <span style={s.userEmail}>{user?.email}</span>
             <button style={s.btn} onClick={() => setShowWhatsNew(true)}>What's New</button>
-            <button style={s.btn} onClick={() => navigate('/users')}>Users</button>
+            {isAdmin && <button style={s.btn} onClick={() => navigate('/users')}>Users</button>}
             <button style={s.btn} onClick={() => supabase.auth.signOut()}>Sign Out</button>
           </div>
         </div>
