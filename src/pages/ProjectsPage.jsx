@@ -507,7 +507,6 @@ export default function ProjectsPage() {
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <SectionTitle>Projects</SectionTitle>
                         <button onClick={() => { setShowProjectsExpanded(true); setExpandedSearch(''); setExpandedClientFilter(''); setExpandedInspectorFilter('') }} style={{ background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '3px 10px', color: '#EEFF00', fontSize: 10, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }} title="View all projects">View All</button>
                       </div>
                       <div style={{ display: 'flex', gap: 6 }}>
@@ -1257,7 +1256,7 @@ const s = {
   headerInner:  { maxWidth: 1600, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 0' },
   headerRight:  { display: 'flex', alignItems: 'center', gap: 12 },
   userEmail:    { color: '#fff', fontSize: 14, fontWeight: 500 },
-  btn:          { background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, padding: '8px 18px', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer' },
+  btn:          { background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '8px 18px', color: '#EEFF00', fontSize: 13, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' },
 
   statsBar:     { maxWidth: 1600, margin: '0 auto', padding: '20px 32px', display: 'flex', alignItems: 'center', gap: 0, borderBottom: '1px solid #162840' },
   statsDivider: { width: 1, height: 40, background: '#1A3A5C', flexShrink: 0, margin: '0 8px' },
