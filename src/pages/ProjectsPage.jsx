@@ -116,6 +116,15 @@ export default function ProjectsPage() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
+  useEffect(() => {
+    const anyOpen = showProjectsExpanded || showCreateProject || !!showReinspect
+    if (anyOpen) {
+      const prev = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => { document.body.style.overflow = prev }
+    }
+  }, [showProjectsExpanded, showCreateProject, showReinspect])
+
   function handleLayoutChange(newLayout) {
     setLayout(newLayout)
     localStorage.setItem(LAYOUT_KEY, JSON.stringify(newLayout))
