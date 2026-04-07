@@ -518,7 +518,7 @@ export default function ProjectsPage() {
                         {['active', 'completed', 'archived'].map(tab => (
                           <button key={tab}
                             onClick={() => setProjectTab(tab)}
-                            style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 6, border: 'none', cursor: 'pointer', background: projectTab === tab ? (tab === 'completed' ? '#4CAF50' : '#EEFF00') : '#1A3A5C', color: projectTab === tab ? (tab === 'completed' ? '#fff' : '#0D1F35') : '#8A9BAD', textTransform: 'capitalize' }}
+                            style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 4, border: '1px solid #EEFF00', cursor: 'pointer', background: projectTab === tab ? '#EEFF00' : 'none', color: projectTab === tab ? '#0D1F35' : '#EEFF00', textTransform: 'uppercase', letterSpacing: '0.05em' }}
                           >{tab}</button>
                         ))}
                       </div>
@@ -658,7 +658,7 @@ export default function ProjectsPage() {
                 {['active', 'completed', 'archived'].map(tab => (
                   <button key={tab}
                     onClick={() => setProjectTab(tab)}
-                    style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 6, border: 'none', cursor: 'pointer', background: projectTab === tab ? (tab === 'completed' ? '#4CAF50' : '#EEFF00') : '#1A3A5C', color: projectTab === tab ? (tab === 'completed' ? '#fff' : '#0D1F35') : '#8A9BAD', textTransform: 'capitalize' }}
+                    style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 4, border: '1px solid #EEFF00', cursor: 'pointer', background: projectTab === tab ? '#EEFF00' : 'none', color: projectTab === tab ? '#0D1F35' : '#EEFF00', textTransform: 'uppercase', letterSpacing: '0.05em' }}
                   >{tab}</button>
                 ))}
                 <button type="button" onClick={() => setShowProjectsExpanded(false)} style={{ background: 'none', border: 'none', color: '#8A9BAD', fontSize: 22, cursor: 'pointer', padding: '0 4px' }}>&times;</button>
@@ -1282,13 +1282,13 @@ const s = {
   feedMeta:     { color: '#4A6580', fontSize: 11, marginTop: 2 },
   activityDot:  { width: 8, height: 8, borderRadius: '50%', background: '#EEFF00', flexShrink: 0 },
 
-  toolBtn:   { background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8, padding: '8px 18px', color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' },
+  toolBtn:   { background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '8px 18px', color: '#EEFF00', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.05em' },
   liveBadge: { display: 'flex', alignItems: 'center', gap: 6, color: '#4CAF50', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em' },
   liveDot:   { width: 8, height: 8, borderRadius: '50%', background: '#4CAF50', display: 'inline-block', animation: 'livePulse 1.5s ease-in-out infinite' },
 
   reinspectBtn: { background: 'transparent', border: '1px solid #EEFF00', borderRadius: 6, padding: '4px 10px', color: '#EEFF00', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s' },
 
-  cpBtn:     { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
+  cpBtn:     { background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '4px 12px', color: '#EEFF00', fontSize: 11, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' },
   cpOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 },
   cpModal:   { background: '#0D1F35', borderRadius: 16, padding: '28px 32px', width: '100%', maxWidth: 620, border: '1px solid #1A3A5C', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' },
   expandedModal: { background: '#0D1F35', borderRadius: 16, padding: '24px 28px', width: '95vw', maxWidth: 1600, height: '90vh', display: 'flex', flexDirection: 'column', border: '1px solid #1A3A5C', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' },
