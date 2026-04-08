@@ -1434,10 +1434,19 @@ function ProjectActionsMenu({ project, onReinspect, onDelete }) {
     await supabase.from('projects').update({ is_archived: !isArchived }).eq('id', project.id)
   })
 
-  // stopPropagation on mousedown prevents react-grid-layout (used in the main
-  // Projects panel) from claiming the event as a drag-start, which otherwise
-  // suppresses the button's click entirely.
-  const stop = e => e.stopPropagation()
+  // Stop all propagation variants so nothing upstream (grid layout, row onClick,
+  // table row hover handlers, etc.) can interfere with the button.
+  const stop = e => { e.stopPropagation() }
+
+  // Trigger on pointerdown instead of click. Click events can be suppressed by
+  // ancestors listening in the capture phase (e.g. drag libraries, table row
+  // navigation hooks) but pointerdown fires first and is much harder to eat.
+  const handleToggle = (e) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (open) setOpen(false)
+    else openMenu()
+  }
 
   return (
     <div
@@ -1447,7 +1456,14 @@ function ProjectActionsMenu({ project, onReinspect, onDelete }) {
       onMouseDown={stop}
       onPointerDown={stop}
     >
-      <button ref={btnRef} style={s.actionsBtn} onClick={() => open ? setOpen(false) : openMenu()} title="Actions">⋯</button>
+      <button
+        ref={btnRef}
+        type="button"
+        style={s.actionsBtn}
+        onPointerDown={handleToggle}
+        onClick={stop}
+        title="Actions"
+      >⋯</button>
       {open && (
         <div
           style={{ ...s.actionsMenu, top: pos.top, left: pos.left }}
