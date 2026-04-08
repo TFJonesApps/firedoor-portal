@@ -1369,7 +1369,7 @@ const s = {
   cpInput:   { background: '#162840', border: '1px solid #243F5C', borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, outline: 'none' },
   cpSave:    { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
   actionsBtn:    { background: 'transparent', border: '1px solid #EEFF00', borderRadius: 6, padding: '4px 10px', color: '#EEFF00', fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: 1, letterSpacing: '0.1em' },
-  actionsMenu:   { position: 'absolute', right: 0, top: 'calc(100% + 4px)', background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, minWidth: 170, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 50, overflow: 'hidden' },
+  actionsMenu:   { position: 'fixed', background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, minWidth: 170, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 9999, overflow: 'hidden' },
   actionsItem:   { display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '10px 14px', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', borderBottom: '1px solid #162840' },
   actionsItemDanger: { color: '#F44336' },
 }
@@ -1380,15 +1380,39 @@ const s = {
 // realtime subscription picks up changes automatically, so no refresh callbacks needed.
 function ProjectActionsMenu({ project, onReinspect, onDelete }) {
   const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
   const wrapRef = useRef(null)
+  const btnRef = useRef(null)
+
+  // Position the fixed menu relative to the button's viewport rect so it
+  // escapes any clipping parent (scroll panels, overflow: hidden, etc).
+  const openMenu = () => {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      const menuWidth = 180
+      // Right-align to the button, clamp to viewport
+      let left = r.right - menuWidth
+      if (left < 8) left = 8
+      if (left + menuWidth > window.innerWidth - 8) left = window.innerWidth - menuWidth - 8
+      setPos({ top: r.bottom + 4, left })
+    }
+    setOpen(true)
+  }
 
   useEffect(() => {
     if (!open) return
     const handler = (e) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false)
     }
+    const closeOnScroll = () => setOpen(false)
     document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    window.addEventListener('scroll', closeOnScroll, true)
+    window.addEventListener('resize', closeOnScroll)
+    return () => {
+      document.removeEventListener('mousedown', handler)
+      window.removeEventListener('scroll', closeOnScroll, true)
+      window.removeEventListener('resize', closeOnScroll)
+    }
   }, [open])
 
   const isCompleted = project.is_completed === true
@@ -1407,10 +1431,10 @@ function ProjectActionsMenu({ project, onReinspect, onDelete }) {
   })
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative', display: 'inline-block' }} onClick={e => e.stopPropagation()}>
-      <button style={s.actionsBtn} onClick={() => setOpen(o => !o)} title="Actions">⋯</button>
+    <div ref={wrapRef} style={{ display: 'inline-block' }} onClick={e => e.stopPropagation()}>
+      <button ref={btnRef} style={s.actionsBtn} onClick={() => open ? setOpen(false) : openMenu()} title="Actions">⋯</button>
       {open && (
-        <div style={s.actionsMenu}>
+        <div style={{ ...s.actionsMenu, top: pos.top, left: pos.left }}>
           <button style={s.actionsItem} onClick={() => { setOpen(false); onReinspect(project) }}>
             Reinspect
           </button>
