@@ -21,6 +21,7 @@ const KNOWN_ENGINEERS = {
   'gareth.robertson@tfjones.com': 'Gareth Robertson',
   'keiran.thompson@tfjones.com': 'Keiran Thompson',
   'jwild.tfjones@gmail.com': 'John Wild',
+  'wayne.musgrave@tfjones.com': 'Wayne Musgrave',
 }
 
 const PANEL_LABELS = {
