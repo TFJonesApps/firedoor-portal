@@ -410,10 +410,21 @@ function drawSummaryRow(doc, ins, y, rowIndex) {
   const loc = doc.splitTextToSize(ins.door_location || '—', CW * 0.5)[0] 
   doc.text(loc, ML + 3, y + 5) 
   doc.text(ins.fire_rating || '—', ML + CW * 0.53, y + 5) 
-  const bw = 16; const bx = ML + CW - 3 - bw 
-  doc.setFillColor(...(isPassed ? GREEN : RED)); doc.roundedRect(bx, y + 1, bw, 5, 1.5, 1.5, 'F') 
-  doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...WHITE) 
-  doc.text(ins.inspection_passed || '—', bx + bw / 2, y + 5, { align: 'center' }) 
+  // Result pill — sized to fill most of the row height, text properly centered.
+  const bw = 22
+  const bh = SUM_ROW_H - 2          // 5mm -> fills row with 1mm padding each side
+  const bx = ML + CW - 3 - bw
+  const by = y + 1
+  doc.setFillColor(...(isPassed ? GREEN : RED))
+  doc.roundedRect(bx, by, bw, bh, 1.8, 1.8, 'F')
+  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...WHITE)
+  // Vertical centre: jsPDF text y is the baseline, so nudge by ~0.35 * fontSize/2
+  doc.text(
+    (ins.inspection_passed || '—').toUpperCase(),
+    bx + bw / 2,
+    by + bh / 2 + 1.3,
+    { align: 'center', baseline: 'alphabetic' }
+  )
 }
 
 // ─── Image helpers ────────────────────────────────────────────────────────────
