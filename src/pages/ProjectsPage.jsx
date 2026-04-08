@@ -514,7 +514,7 @@ export default function ProjectsPage({ role }) {
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <button onClick={() => { setShowProjectsExpanded(true); setExpandedSearch(''); setExpandedClientFilter(''); setExpandedInspectorFilter('') }} style={{ background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '4px 12px', color: '#EEFF00', fontSize: 11, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }} title="View all projects">View All</button>
+                        <button onClick={() => { setShowProjectsExpanded(true); setExpandedSearch(''); setExpandedClientFilter(''); setExpandedInspectorFilter('') }} style={{ background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '4px 12px', color: '#EEFF00', fontSize: 11, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }} title="Manage projects">Manage</button>
                         <button
                           onClick={() => { setShowCreateProject(v => !v); setCreateProjectError('') }}
                           style={s.cpBtn}
@@ -547,12 +547,7 @@ export default function ProjectsPage({ role }) {
                                 <td style={s.td}><span style={{ color: '#CBD5E1' }}>{p.order_number || '—'}</span></td>
                                 <td style={s.td}><span style={{ color: '#fff', fontWeight: 500 }}>{(p.engineer_id && engineerIdToName[p.engineer_id]) || KNOWN_ENGINEERS[p.engineer_name?.toLowerCase()] || (p.engineer_name?.includes('@') ? '—' : p.engineer_name) || '—'}</span></td>
                                 <td style={s.td}><span style={{ color: '#94A3B8' }}>{new Date(p.created_at).toLocaleDateString('en-GB')}</span></td>
-                                <td style={s.td}>
-                                  <ProjectActionsMenu
-                                    project={p}
-                                    onReinspect={proj => { setShowReinspect(proj); setReinspectEngineerId(proj.engineer_id || ''); setReinspectOrder('') }}
-                                  />
-                                </td>
+                                <td style={{ ...s.td, textAlign: 'right', color: '#4A6580', fontSize: 18, fontWeight: 700 }}>›</td>
                               </tr>
                             ))}
                           </tbody>
@@ -657,7 +652,7 @@ export default function ProjectsPage({ role }) {
           <div style={{ ...s.expandedModal, position: 'relative' }} onClick={e => e.stopPropagation()}>
             <button type="button" onClick={() => setShowProjectsExpanded(false)} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', color: '#EEFF00', fontSize: 32, lineHeight: 1, cursor: 'pointer', padding: '4px 8px', fontWeight: 300 }}>&times;</button>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Projects</h2>
+              <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Manage Projects</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingRight: 40 }}>
                 <button
                   onClick={() => { setShowProjectsExpanded(false); setShowCreateProject(true); setCreateProjectError('') }}
