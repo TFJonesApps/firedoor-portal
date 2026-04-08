@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import GridLayout from 'react-grid-layout'
@@ -9,8 +9,6 @@ if (!document.getElementById('live-pulse-style')) {
   style.id = 'live-pulse-style'
   style.textContent = `
     @keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-    .fd-action-item:hover { background: #162840 !important; color: #EEFF00 !important; }
-    .fd-action-item.danger:hover { background: #2E0A0A !important; color: #F44336 !important; }
   `
   document.head.appendChild(style)
 }
@@ -105,15 +103,7 @@ export default function ProjectsPage({ role }) {
   const [creatingProject, setCreatingProject] = useState(false)
   const [createProjectError, setCreateProjectError] = useState('')
   const [inspectorUsers, setInspectorUsers] = useState([])
-  const [showProjectsExpanded, setShowProjectsExpanded] = useState(false)
   const [showWhatsNew, setShowWhatsNew] = useState(false)
-  const [expandedClientFilter, setExpandedClientFilter] = useState('')
-  const [expandedInspectorFilter, setExpandedInspectorFilter] = useState('')
-  const [expandedSearch, setExpandedSearch] = useState('')
-  const [showReinspect, setShowReinspect] = useState(null)
-  const [reinspectOrder, setReinspectOrder] = useState('')
-  const [reinspectEngineerId, setReinspectEngineerId] = useState('')
-  const [creatingReinspect, setCreatingReinspect] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -123,13 +113,12 @@ export default function ProjectsPage({ role }) {
   }, [])
 
   useEffect(() => {
-    const anyOpen = showProjectsExpanded || showCreateProject || !!showReinspect
-    if (anyOpen) {
+    if (showCreateProject) {
       const prev = document.body.style.overflow
       document.body.style.overflow = 'hidden'
       return () => { document.body.style.overflow = prev }
     }
-  }, [showProjectsExpanded, showCreateProject, showReinspect])
+  }, [showCreateProject])
 
   function handleLayoutChange(newLayout) {
     setLayout(newLayout)
@@ -212,38 +201,6 @@ export default function ProjectsPage({ role }) {
       setCreateProjectError(err.message)
     }
     setCreatingProject(false)
-  }
-
-  async function createReinspection(e) {
-    e.preventDefault()
-    if (!showReinspect) return
-    setCreatingReinspect(true)
-    try {
-      const src = showReinspect
-      const inspector = inspectorUsers.find(u => u.id === reinspectEngineerId)
-      const engineerEmail = inspector?.email || ''
-      const engineerName = KNOWN_ENGINEERS[engineerEmail.toLowerCase()] || engineerEmail
-      const { error } = await supabase.from('projects').insert({
-        name: `${src.name} (Reinspection)`,
-        address: src.address || null,
-        postcode: src.postcode || null,
-        client_id: src.client_id || null,
-        client_name: src.client_name || null,
-        order_number: reinspectOrder || null,
-        engineer_id: reinspectEngineerId,
-        engineer_name: engineerName,
-        created_at: Date.now(),
-        source_project_id: src.id,
-      })
-      if (error) throw error
-      setShowReinspect(null)
-      setReinspectOrder('')
-      setReinspectEngineerId('')
-      await fetchProjects()
-    } catch (err) {
-      alert('Failed to create reinspection: ' + err.message)
-    }
-    setCreatingReinspect(false)
   }
 
   // Latest inspection per door (deduped)
@@ -379,28 +336,6 @@ export default function ProjectsPage({ role }) {
       p.order_number?.toLowerCase().includes(q)
   })
 
-  // Expanded modal filtered projects (with its own filters)
-  const expandedProjects = projects.filter(p => {
-    const archived  = p.is_archived === true
-    const completed = p.is_completed === true
-    if (projectTab === 'active'    && (archived || completed)) return false
-    if (projectTab === 'completed' && !completed) return false
-    if (projectTab === 'archived'  && !archived) return false
-    if (expandedClientFilter && p.client_name !== expandedClientFilter) return false
-    if (expandedInspectorFilter) {
-      const name = (p.engineer_id && engineerIdToName[p.engineer_id]) || p.engineer_name || ''
-      if (name !== expandedInspectorFilter) return false
-    }
-    const q = expandedSearch.toLowerCase()
-    return !q ||
-      p.name?.toLowerCase().includes(q)          ||
-      p.address?.toLowerCase().includes(q)       ||
-      p.postcode?.toLowerCase().includes(q)      ||
-      p.client_name?.toLowerCase().includes(q)   ||
-      p.engineer_name?.toLowerCase().includes(q) ||
-      p.order_number?.toLowerCase().includes(q)
-  })
-
   return (
     <div style={s.page}>
 
@@ -430,7 +365,7 @@ export default function ProjectsPage({ role }) {
       {/* ── Stats bar with tools ── */}
       <div style={s.statsBar}>
         <StatChip label="Total Projects"    value={projects.length}    color="#8A9BAD"
-          onClick={() => { setProjectTab('active'); setShowProjectsExpanded(true); setExpandedSearch(''); setExpandedClientFilter(''); setExpandedInspectorFilter('') }}
+          onClick={() => navigate('/projects')}
           title="View all projects" />
         <div style={s.statsDivider} />
         <StatChip label="Total Doors"       value={totalDoors}         color="#fff"
@@ -450,7 +385,7 @@ export default function ProjectsPage({ role }) {
           title="Jump to remedial works" />
         <div style={s.statsDivider} />
         <StatChip label="Projects This Month" value={thisMonthCount}   color="#EEFF00"
-          onClick={() => { setProjectTab('active'); setShowProjectsExpanded(true); setExpandedSearch(''); setExpandedClientFilter(''); setExpandedInspectorFilter('') }}
+          onClick={() => navigate('/projects')}
           title="View projects" />
         <div style={{ flex: 1 }} />
         <div style={{ display: 'flex', gap: 10 }}>
@@ -514,7 +449,7 @@ export default function ProjectsPage({ role }) {
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <button onClick={() => { setShowProjectsExpanded(true); setExpandedSearch(''); setExpandedClientFilter(''); setExpandedInspectorFilter('') }} style={{ background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '4px 12px', color: '#EEFF00', fontSize: 11, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }} title="Manage projects">Manage</button>
+                        <button onClick={() => navigate('/projects')} style={{ background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '4px 12px', color: '#EEFF00', fontSize: 11, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }} title="Manage projects">Manage</button>
                         <button
                           onClick={() => { setShowCreateProject(v => !v); setCreateProjectError('') }}
                           style={s.cpBtn}
@@ -646,124 +581,6 @@ export default function ProjectsPage({ role }) {
             ))}
         </GridLayout>
       </div>
-
-      {showProjectsExpanded && (
-        <div style={s.cpOverlay} onClick={() => setShowProjectsExpanded(false)}>
-          <div style={{ ...s.expandedModal, position: 'relative' }} onClick={e => e.stopPropagation()}>
-            <button type="button" onClick={() => setShowProjectsExpanded(false)} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', color: '#EEFF00', fontSize: 32, lineHeight: 1, cursor: 'pointer', padding: '4px 8px', fontWeight: 300 }}>&times;</button>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Manage Projects</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingRight: 40 }}>
-                <button
-                  onClick={() => { setShowProjectsExpanded(false); setShowCreateProject(true); setCreateProjectError('') }}
-                  style={s.cpBtn}
-                >+ New Project</button>
-                {['active', 'completed', 'archived'].map(tab => (
-                  <button key={tab}
-                    onClick={() => setProjectTab(tab)}
-                    style={{ padding: '4px 12px', fontSize: 11, fontWeight: 700, borderRadius: 4, border: '1px solid #EEFF00', cursor: 'pointer', background: projectTab === tab ? '#EEFF00' : 'none', color: projectTab === tab ? '#0D1F35' : '#EEFF00', textTransform: 'uppercase', letterSpacing: '0.05em' }}
-                  >{tab}</button>
-                ))}
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-              <input
-                style={{ ...s.cpInput, flex: 1 }}
-                placeholder="Search projects, addresses, postcodes, order numbers…"
-                value={expandedSearch}
-                onChange={e => setExpandedSearch(e.target.value)}
-              />
-              <select style={{ ...s.cpInput, minWidth: 160 }} value={expandedClientFilter} onChange={e => setExpandedClientFilter(e.target.value)}>
-                <option value="">All Clients</option>
-                {clients.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-              </select>
-              <select style={{ ...s.cpInput, minWidth: 160 }} value={expandedInspectorFilter} onChange={e => setExpandedInspectorFilter(e.target.value)}>
-                <option value="">All Inspectors</option>
-                {inspectors.map(n => <option key={n} value={n}>{n}</option>)}
-              </select>
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              {expandedProjects.length === 0 ? (
-                <p style={{ color: '#8A9BAD', textAlign: 'center', padding: 40 }}>No projects found.</p>
-              ) : (
-                <table style={s.table}>
-                  <thead><tr>{['Project','Address','Client','Order No.','Inspector','Created','Doors','Pass Rate',''].map(h => <th key={h} style={{ ...s.th, position: 'sticky', top: 0, zIndex: 1 }}>{h}</th>)}</tr></thead>
-                  <tbody>
-                    {expandedProjects.map(p => {
-                      const pIns = inspections.filter(i => i.project_id === p.id)
-                      const doorCount = pIns.length
-                      const passRate = doorCount > 0 ? Math.round((pIns.filter(i => i.inspection_passed === 'Pass').length / doorCount) * 100) : '—'
-                      return (
-                        <tr key={p.id} style={s.row} onClick={() => { setShowProjectsExpanded(false); navigate(`/project/${p.id}`, { state: { project: p } }) }}>
-                          <td style={s.td}>
-                            <span style={s.projectName}>{p.name}</span>
-                            {p.is_completed && <span style={{ background: '#4CAF50', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, marginLeft: 8, verticalAlign: 'middle' }}>COMPLETE</span>}
-                          </td>
-                          <td style={s.td}><span style={{ color: '#CBD5E1' }}>{[p.address, p.postcode].filter(Boolean).join(', ') || '—'}</span></td>
-                          <td style={s.td}><span style={{ color: '#EEFF00', fontWeight: 600 }}>{p.client_name || '—'}</span></td>
-                          <td style={s.td}><span style={{ color: '#CBD5E1' }}>{p.order_number || '—'}</span></td>
-                          <td style={s.td}><span style={{ color: '#fff', fontWeight: 500 }}>{(p.engineer_id && engineerIdToName[p.engineer_id]) || KNOWN_ENGINEERS[p.engineer_name?.toLowerCase()] || (p.engineer_name?.includes('@') ? '—' : p.engineer_name) || '—'}</span></td>
-                          <td style={s.td}><span style={{ color: '#94A3B8' }}>{new Date(p.created_at).toLocaleDateString('en-GB')}</span></td>
-                          <td style={s.td}><span style={{ color: '#fff', fontWeight: 600 }}>{doorCount || '—'}</span></td>
-                          <td style={s.td}><span style={{ color: passRate === '—' ? '#8A9BAD' : passRate >= 80 ? '#4CAF50' : passRate >= 50 ? '#FF9800' : '#F44336', fontWeight: 600 }}>{passRate === '—' ? '—' : `${passRate}%`}</span></td>
-                          <td style={s.td}>
-                            <ProjectActionsMenu
-                              project={p}
-                              onReinspect={proj => { setShowProjectsExpanded(false); setShowReinspect(proj); setReinspectEngineerId(proj.engineer_id || ''); setReinspectOrder('') }}
-                            />
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-            <div style={{ color: '#4A6580', fontSize: 11, marginTop: 8, textAlign: 'right' }}>{expandedProjects.length} project{expandedProjects.length !== 1 ? 's' : ''}</div>
-          </div>
-        </div>
-      )}
-
-      {showReinspect && (
-        <div style={s.cpOverlay} onClick={() => setShowReinspect(null)}>
-          <form onSubmit={createReinspection} style={s.cpModal} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Reinspect Project</h2>
-              <button type="button" onClick={() => setShowReinspect(null)} style={{ background: 'none', border: 'none', color: '#8A9BAD', fontSize: 22, cursor: 'pointer', padding: '0 4px' }}>&times;</button>
-            </div>
-            <p style={{ color: '#8A9BAD', fontSize: 13, margin: '0 0 16px' }}>
-              Create a new reinspection project for <span style={{ color: '#EEFF00', fontWeight: 700 }}>{showReinspect.name}</span> with the same site details and door list ready to go.
-            </p>
-            <div style={s.cpGrid}>
-              <div style={s.cpField}>
-                <label style={s.cpLabel}>Source Project</label>
-                <input style={{ ...s.cpInput, opacity: 0.6 }} value={showReinspect.name} disabled />
-              </div>
-              <div style={s.cpField}>
-                <label style={s.cpLabel}>Site Address</label>
-                <input style={{ ...s.cpInput, opacity: 0.6 }} value={[showReinspect.address, showReinspect.postcode].filter(Boolean).join(', ') || '—'} disabled />
-              </div>
-              <div style={s.cpField}>
-                <label style={s.cpLabel}>New Order Number *</label>
-                <input style={s.cpInput} required placeholder="e.g. ORD-12345" value={reinspectOrder} onChange={e => setReinspectOrder(e.target.value)} />
-              </div>
-              <div style={s.cpField}>
-                <label style={s.cpLabel}>Assign to Inspector *</label>
-                <select style={s.cpInput} required value={reinspectEngineerId} onChange={e => setReinspectEngineerId(e.target.value)}>
-                  <option value="">— Select Inspector —</option>
-                  {inspectorUsers.map(u => <option key={u.id} value={u.id}>{KNOWN_ENGINEERS[u.email?.toLowerCase()] || u.email}</option>)}
-                </select>
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-              <button type="button" onClick={() => setShowReinspect(null)} style={{ background: 'transparent', border: '1px solid #243F5C', borderRadius: 8, padding: '10px 20px', color: '#8A9BAD', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginRight: 10 }}>Cancel</button>
-              <button style={s.cpSave} type="submit" disabled={creatingReinspect}>
-                {creatingReinspect ? 'Creating…' : 'Create Reinspection'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {showCreateProject && (
         <div style={s.cpOverlay} onClick={() => setShowCreateProject(false)}>
@@ -1361,130 +1178,10 @@ const s = {
   cpBtn:     { background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '4px 12px', color: '#EEFF00', fontSize: 11, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' },
   cpOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, overflow: 'hidden' },
   cpModal:   { background: '#0D1F35', borderRadius: 16, padding: '28px 32px', width: '100%', maxWidth: 620, border: '1px solid #1A3A5C', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' },
-  expandedModal: { background: '#0D1F35', borderRadius: 16, padding: '24px 28px', width: '95vw', maxWidth: 1600, height: '90vh', display: 'flex', flexDirection: 'column', border: '1px solid #1A3A5C', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' },
   cpGrid:    { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 },
   cpField:   { display: 'flex', flexDirection: 'column', gap: 6 },
   cpLabel:   { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' },
   cpInput:   { background: '#162840', border: '1px solid #243F5C', borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, outline: 'none' },
   cpSave:    { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
-  actionsBtn:    { background: 'transparent', border: '1px solid #EEFF00', borderRadius: 6, padding: '4px 10px', color: '#EEFF00', fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: 1, letterSpacing: '0.1em' },
-  actionsMenu:   { position: 'fixed', background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, minWidth: 170, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 9999, overflow: 'hidden' },
-  actionsItem:   { display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '10px 14px', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', borderBottom: '1px solid #162840' },
-  actionsItemDanger: { color: '#F44336' },
 }
 
-// ─── Project row actions menu ─────────────────────────────────────────────────
-// Dropdown with Reinspect / Complete / Archive / Delete. Self-contained:
-// handles its own open state, click-outside, and Supabase updates. The parent's
-// realtime subscription picks up changes automatically, so no refresh callbacks needed.
-function ProjectActionsMenu({ project, onReinspect, onDelete }) {
-  const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState({ top: 0, left: 0 })
-  const wrapRef = useRef(null)
-  const btnRef = useRef(null)
-
-  // Position the fixed menu relative to the button's viewport rect so it
-  // escapes any clipping parent (scroll panels, overflow: hidden, etc).
-  const openMenu = () => {
-    if (btnRef.current) {
-      const r = btnRef.current.getBoundingClientRect()
-      const menuWidth = 180
-      // Right-align to the button, clamp to viewport
-      let left = r.right - menuWidth
-      if (left < 8) left = 8
-      if (left + menuWidth > window.innerWidth - 8) left = window.innerWidth - menuWidth - 8
-      setPos({ top: r.bottom + 4, left })
-    }
-    setOpen(true)
-  }
-
-  useEffect(() => {
-    if (!open) return
-    const handler = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false)
-    }
-    const closeOnScroll = () => setOpen(false)
-    document.addEventListener('mousedown', handler)
-    window.addEventListener('scroll', closeOnScroll, true)
-    window.addEventListener('resize', closeOnScroll)
-    return () => {
-      document.removeEventListener('mousedown', handler)
-      window.removeEventListener('scroll', closeOnScroll, true)
-      window.removeEventListener('resize', closeOnScroll)
-    }
-  }, [open])
-
-  const isCompleted = project.is_completed === true
-  const isArchived  = project.is_archived === true
-
-  const run = async (fn) => {
-    setOpen(false)
-    try { await fn() } catch (e) { console.error('Project action failed:', e) }
-  }
-
-  const toggleCompleted = () => run(async () => {
-    await supabase.from('projects').update({ is_completed: !isCompleted }).eq('id', project.id)
-  })
-  const toggleArchived = () => run(async () => {
-    await supabase.from('projects').update({ is_archived: !isArchived }).eq('id', project.id)
-  })
-
-  // Stop all propagation variants so nothing upstream (grid layout, row onClick,
-  // table row hover handlers, etc.) can interfere with the button.
-  const stop = e => { e.stopPropagation() }
-
-  // Trigger on pointerdown instead of click. Click events can be suppressed by
-  // ancestors listening in the capture phase (e.g. drag libraries, table row
-  // navigation hooks) but pointerdown fires first and is much harder to eat.
-  const handleToggle = (e) => {
-    e.stopPropagation()
-    e.preventDefault()
-    if (open) setOpen(false)
-    else openMenu()
-  }
-
-  return (
-    <div
-      ref={wrapRef}
-      style={{ display: 'inline-block' }}
-      onClick={stop}
-      onMouseDown={stop}
-      onPointerDown={stop}
-    >
-      <button
-        ref={btnRef}
-        type="button"
-        style={s.actionsBtn}
-        onPointerDown={handleToggle}
-        onClick={stop}
-        title="Actions"
-      >⋯</button>
-      {open && (
-        <div
-          style={{ ...s.actionsMenu, top: pos.top, left: pos.left }}
-          onMouseDown={stop}
-          onPointerDown={stop}
-        >
-          <button className="fd-action-item" style={s.actionsItem} onClick={() => { setOpen(false); onReinspect(project) }}>
-            Reinspect
-          </button>
-          <button className="fd-action-item" style={s.actionsItem} onClick={toggleCompleted}>
-            {isCompleted ? 'Mark as Active' : 'Mark Complete'}
-          </button>
-          <button className="fd-action-item" style={s.actionsItem} onClick={toggleArchived}>
-            {isArchived ? 'Unarchive' : 'Archive'}
-          </button>
-          {onDelete && (
-            <button
-              className="fd-action-item danger"
-              style={{ ...s.actionsItem, ...s.actionsItemDanger, borderBottom: 'none' }}
-              onClick={() => run(async () => onDelete(project))}
-            >
-              Delete
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
