@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import GridLayout from 'react-grid-layout'
@@ -544,9 +544,10 @@ export default function ProjectsPage({ role }) {
                                 <td style={s.td}><span style={{ color: '#fff', fontWeight: 500 }}>{(p.engineer_id && engineerIdToName[p.engineer_id]) || KNOWN_ENGINEERS[p.engineer_name?.toLowerCase()] || (p.engineer_name?.includes('@') ? '—' : p.engineer_name) || '—'}</span></td>
                                 <td style={s.td}><span style={{ color: '#94A3B8' }}>{new Date(p.created_at).toLocaleDateString('en-GB')}</span></td>
                                 <td style={s.td}>
-                                  <button style={s.reinspectBtn} onClick={e => { e.stopPropagation(); setShowReinspect(p); setReinspectEngineerId(p.engineer_id || ''); setReinspectOrder('') }}>
-                                    Reinspect
-                                  </button>
+                                  <ProjectActionsMenu
+                                    project={p}
+                                    onReinspect={proj => { setShowReinspect(proj); setReinspectEngineerId(proj.engineer_id || ''); setReinspectOrder('') }}
+                                  />
                                 </td>
                               </tr>
                             ))}
@@ -707,9 +708,10 @@ export default function ProjectsPage({ role }) {
                           <td style={s.td}><span style={{ color: '#fff', fontWeight: 600 }}>{doorCount || '—'}</span></td>
                           <td style={s.td}><span style={{ color: passRate === '—' ? '#8A9BAD' : passRate >= 80 ? '#4CAF50' : passRate >= 50 ? '#FF9800' : '#F44336', fontWeight: 600 }}>{passRate === '—' ? '—' : `${passRate}%`}</span></td>
                           <td style={s.td}>
-                            <button style={s.reinspectBtn} onClick={e => { e.stopPropagation(); setShowProjectsExpanded(false); setShowReinspect(p); setReinspectEngineerId(p.engineer_id || ''); setReinspectOrder('') }}>
-                              Reinspect
-                            </button>
+                            <ProjectActionsMenu
+                              project={p}
+                              onReinspect={proj => { setShowProjectsExpanded(false); setShowReinspect(proj); setReinspectEngineerId(proj.engineer_id || ''); setReinspectOrder('') }}
+                            />
                           </td>
                         </tr>
                       )
@@ -1366,4 +1368,66 @@ const s = {
   cpLabel:   { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' },
   cpInput:   { background: '#162840', border: '1px solid #243F5C', borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, outline: 'none' },
   cpSave:    { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
+  actionsBtn:    { background: 'transparent', border: '1px solid #EEFF00', borderRadius: 6, padding: '4px 10px', color: '#EEFF00', fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: 1, letterSpacing: '0.1em' },
+  actionsMenu:   { position: 'absolute', right: 0, top: 'calc(100% + 4px)', background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, minWidth: 170, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', zIndex: 50, overflow: 'hidden' },
+  actionsItem:   { display: 'block', width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '10px 14px', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', borderBottom: '1px solid #162840' },
+  actionsItemDanger: { color: '#F44336' },
+}
+
+// ─── Project row actions menu ─────────────────────────────────────────────────
+// Dropdown with Reinspect / Complete / Archive / Delete. Self-contained:
+// handles its own open state, click-outside, and Supabase updates. The parent's
+// realtime subscription picks up changes automatically, so no refresh callbacks needed.
+function ProjectActionsMenu({ project, onReinspect, onDelete }) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const isCompleted = project.is_completed === true
+  const isArchived  = project.is_archived === true
+
+  const run = async (fn) => {
+    setOpen(false)
+    try { await fn() } catch (e) { console.error('Project action failed:', e) }
+  }
+
+  const toggleCompleted = () => run(async () => {
+    await supabase.from('projects').update({ is_completed: !isCompleted }).eq('id', project.id)
+  })
+  const toggleArchived = () => run(async () => {
+    await supabase.from('projects').update({ is_archived: !isArchived }).eq('id', project.id)
+  })
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative', display: 'inline-block' }} onClick={e => e.stopPropagation()}>
+      <button style={s.actionsBtn} onClick={() => setOpen(o => !o)} title="Actions">⋯</button>
+      {open && (
+        <div style={s.actionsMenu}>
+          <button style={s.actionsItem} onClick={() => { setOpen(false); onReinspect(project) }}>
+            Reinspect
+          </button>
+          <button style={s.actionsItem} onClick={toggleCompleted}>
+            {isCompleted ? 'Mark as Active' : 'Mark Complete'}
+          </button>
+          <button style={s.actionsItem} onClick={toggleArchived}>
+            {isArchived ? 'Unarchive' : 'Archive'}
+          </button>
+          {onDelete && (
+            <button style={{ ...s.actionsItem, ...s.actionsItemDanger, borderBottom: 'none' }}
+              onClick={() => run(async () => onDelete(project))}>
+              Delete
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
