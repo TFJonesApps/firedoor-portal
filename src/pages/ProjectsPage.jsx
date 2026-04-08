@@ -3,11 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import GridLayout from 'react-grid-layout'
 
-// Inject pulse animation for live indicator
+// Inject pulse animation for live indicator + actions menu hover styles
 if (!document.getElementById('live-pulse-style')) {
   const style = document.createElement('style')
   style.id = 'live-pulse-style'
-  style.textContent = `@keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`
+  style.textContent = `
+    @keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .fd-action-item:hover { background: #162840 !important; color: #EEFF00 !important; }
+    .fd-action-item.danger:hover { background: #2E0A0A !important; color: #F44336 !important; }
+  `
   document.head.appendChild(style)
 }
 
@@ -1430,23 +1434,41 @@ function ProjectActionsMenu({ project, onReinspect, onDelete }) {
     await supabase.from('projects').update({ is_archived: !isArchived }).eq('id', project.id)
   })
 
+  // stopPropagation on mousedown prevents react-grid-layout (used in the main
+  // Projects panel) from claiming the event as a drag-start, which otherwise
+  // suppresses the button's click entirely.
+  const stop = e => e.stopPropagation()
+
   return (
-    <div ref={wrapRef} style={{ display: 'inline-block' }} onClick={e => e.stopPropagation()}>
+    <div
+      ref={wrapRef}
+      style={{ display: 'inline-block' }}
+      onClick={stop}
+      onMouseDown={stop}
+      onPointerDown={stop}
+    >
       <button ref={btnRef} style={s.actionsBtn} onClick={() => open ? setOpen(false) : openMenu()} title="Actions">⋯</button>
       {open && (
-        <div style={{ ...s.actionsMenu, top: pos.top, left: pos.left }}>
-          <button style={s.actionsItem} onClick={() => { setOpen(false); onReinspect(project) }}>
+        <div
+          style={{ ...s.actionsMenu, top: pos.top, left: pos.left }}
+          onMouseDown={stop}
+          onPointerDown={stop}
+        >
+          <button className="fd-action-item" style={s.actionsItem} onClick={() => { setOpen(false); onReinspect(project) }}>
             Reinspect
           </button>
-          <button style={s.actionsItem} onClick={toggleCompleted}>
+          <button className="fd-action-item" style={s.actionsItem} onClick={toggleCompleted}>
             {isCompleted ? 'Mark as Active' : 'Mark Complete'}
           </button>
-          <button style={s.actionsItem} onClick={toggleArchived}>
+          <button className="fd-action-item" style={s.actionsItem} onClick={toggleArchived}>
             {isArchived ? 'Unarchive' : 'Archive'}
           </button>
           {onDelete && (
-            <button style={{ ...s.actionsItem, ...s.actionsItemDanger, borderBottom: 'none' }}
-              onClick={() => run(async () => onDelete(project))}>
+            <button
+              className="fd-action-item danger"
+              style={{ ...s.actionsItem, ...s.actionsItemDanger, borderBottom: 'none' }}
+              onClick={() => run(async () => onDelete(project))}
+            >
               Delete
             </button>
           )}
