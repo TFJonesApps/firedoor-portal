@@ -37,6 +37,7 @@ export default function ProjectDetailPage() {
   const [editForm,          setEditForm]          = useState({})
   const [saving,            setSaving]            = useState(false)
   const [generatingPdf,     setGeneratingPdf]     = useState(false)
+  const [pdfProgress,       setPdfProgress]       = useState(null)
   const [clients,           setClients]           = useState([])
   const [publishing,        setPublishing]        = useState(false)
   const [exportingCsv,      setExportingCsv]      = useState(false)
@@ -205,6 +206,25 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
+      {/* PDF generation progress modal */}
+      {pdfProgress && (
+        <div style={styles.lightboxOverlay}>
+          <div style={styles.pdfModal}>
+            <div style={styles.pdfModalTitle}>Generating Report</div>
+            <div style={styles.pdfModalLabel}>{pdfProgress.label}</div>
+            <div style={styles.pdfModalBarWrap}>
+              <div style={{
+                ...styles.pdfModalBarFill,
+                width: `${pdfProgress.total ? (pdfProgress.current / pdfProgress.total) * 100 : 0}%`
+              }} />
+            </div>
+            <div style={styles.pdfModalCount}>
+              {pdfProgress.current} / {pdfProgress.total} doors
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete confirm modal */}
       {showDeleteConfirm && (
         <div style={styles.lightboxOverlay} onClick={() => setShowDeleteConfirm(false)}>
@@ -308,7 +328,15 @@ export default function ProjectDetailPage() {
               <button style={styles.editBtn} onClick={startEdit}>Edit</button>
               <button style={{ ...styles.editBtn, background: '#EEFF00', color: '#0D1F35', opacity: generatingPdf ? 0.6 : 1 }}
                 disabled={generatingPdf || inspections.length === 0}
-                onClick={async () => { setGeneratingPdf(true); try { await generateProjectReport(project, inspections) } catch(e) { console.error(e) } setGeneratingPdf(false) }}>
+                onClick={async () => {
+                  setGeneratingPdf(true)
+                  setPdfProgress({ current: 0, total: inspections.length, label: 'Preparing report…' })
+                  try {
+                    await generateProjectReport(project, inspections, setPdfProgress)
+                  } catch(e) { console.error(e) }
+                  setPdfProgress(null)
+                  setGeneratingPdf(false)
+                }}>
                 {generatingPdf ? 'Generating…' : '⬇ PDF'}
               </button>
               {hasRepairJobs && (
@@ -614,4 +642,10 @@ const styles = {
   lightboxOverlay:{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 },
   lightboxImg:    { maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: 8 },
   lightboxClose:  { position: 'absolute', top: 20, right: 24, background: 'transparent', border: 'none', color: '#fff', fontSize: 28, cursor: 'pointer' },
+  pdfModal:       { background: '#162840', border: '1px solid #1A3A5C', borderRadius: 12, padding: '28px 36px', minWidth: 340, maxWidth: 460, textAlign: 'center', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' },
+  pdfModalTitle:  { fontSize: 16, fontWeight: 700, color: '#EEFF00', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14 },
+  pdfModalLabel:  { fontSize: 14, color: '#fff', marginBottom: 16, minHeight: 20, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  pdfModalBarWrap:{ height: 8, background: '#0D1F35', borderRadius: 4, overflow: 'hidden', marginBottom: 10 },
+  pdfModalBarFill:{ height: '100%', background: '#EEFF00', transition: 'width 0.2s ease' },
+  pdfModalCount:  { fontSize: 12, color: GREY, fontWeight: 600 },
 }
