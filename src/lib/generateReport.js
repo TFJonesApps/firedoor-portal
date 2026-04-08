@@ -25,8 +25,14 @@ const CLIENT_LOGOS = {
   'Lancaster City Council':       'lancastercc.png',
 }
 
+// Small helper: yield to the event loop so the browser can GC and repaint.
+// Prevents tab freezes / OOM crashes on large (40+ door) reports.
+const yieldToBrowser = () => new Promise(resolve => setTimeout(resolve, 0))
+
 // ─── Entry point: Project Report ──────────────────────────────────────────────
-export async function generateProjectReport(project, inspections) {
+// Optional `onProgress({ current, total, label })` callback — wire this to a
+// modal in the UI so users see progress instead of thinking the tab has hung.
+export async function generateProjectReport(project, inspections, onProgress) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null)
 
@@ -37,18 +43,27 @@ export async function generateProjectReport(project, inspections) {
   }
   const clientLogo = clientLogoPath ? await loadLogoImage(clientLogoPath).catch(() => null) : null
 
-  const summaryPages = await coverPage(doc, logo, clientLogo, project, inspections) 
-  const grandTotal = summaryPages + inspections.length 
+  const summaryPages = await coverPage(doc, logo, clientLogo, project, inspections)
+  const grandTotal = summaryPages + inspections.length
 
-  for (let i = 0; i < inspections.length; i++) { 
-    doc.addPage() 
-    await inspectionPage(doc, logo, project, inspections[i], summaryPages + i + 1, grandTotal) 
-  } 
+  for (let i = 0; i < inspections.length; i++) {
+    doc.addPage()
+    await inspectionPage(doc, logo, project, inspections[i], summaryPages + i + 1, grandTotal)
 
-  const parts = [project.client_name, project.name, project.postcode || project.address].filter(Boolean).map(s => s.trim()) 
-  const filename = parts.join(' - ').replace(/[/\\?%*:|"<>]/g, '') + '.pdf' 
-  doc.save(filename) 
-} 
+    // Report progress and yield every page so the browser stays responsive.
+    // On a 40-door report this is the single biggest stability fix.
+    onProgress?.({
+      current: i + 1,
+      total: inspections.length,
+      label: inspections[i]?.door_location || `Door ${i + 1}`
+    })
+    if ((i + 1) % 3 === 0) await yieldToBrowser()
+  }
+
+  const parts = [project.client_name, project.name, project.postcode || project.address].filter(Boolean).map(s => s.trim())
+  const filename = parts.join(' - ').replace(/[/\\?%*:|"<>]/g, '') + '.pdf'
+  doc.save(filename)
+}
 
 // ─── Entry point: Single Inspection Report ──────────────────────────────────── 
 export async function generateSingleInspectionReport(project, inspection) { 
@@ -75,6 +90,7 @@ export async function generateFullHistoryReport(assetId, inspections) {
   for (let i = 0; i < sorted.length; i++) {
     doc.addPage()
     await inspectionPage(doc, logo, project, sorted[i], i + 2, grandTotal)
+    if ((i + 1) % 3 === 0) await yieldToBrowser()
   }
   doc.save(`History_${assetId}.pdf`)
 }
