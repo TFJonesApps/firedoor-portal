@@ -46,10 +46,11 @@ export default function RemedialsPage() {
 
   async function fetchRemedials() {
     setLoading(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('remedials')
       .select('*, inspections(door_location, door_asset_id, fire_rating, inspection_passed, recommended_action, engineer_name, engineer_id), projects(name, client_name, address, postcode)')
       .order('created_at', { ascending: false })
+    if (error) console.error('fetchRemedials error:', error)
     setRemedials(data || [])
     setLoading(false)
   }
@@ -261,7 +262,12 @@ export default function RemedialsPage() {
                         </span>
                       </td>
                       <td style={s.td}><span style={{ color: '#EEFF00', fontWeight: 600 }}>{r.projects?.client_name || '—'}</span></td>
-                      <td style={s.td}><span style={{ color: '#F44336', fontWeight: 500 }}>{r.recommended_action || '—'}</span></td>
+                      <td style={s.td}>
+                        <span style={{ color: '#F44336', fontWeight: 500 }}>{r.recommended_action || '—'}</span>
+                        {r.recommended_repair_actions && (
+                          <div style={{ color: '#FF9800', fontSize: 11, marginTop: 3, lineHeight: '1.4' }}>{r.recommended_repair_actions}</div>
+                        )}
+                      </td>
                       <td style={s.td}><span style={{ color: r.joiner_name ? '#fff' : '#4A6580', fontWeight: 500 }}>{r.joiner_name || 'Unassigned'}</span></td>
                       <td style={s.td}>
                         <span style={{ background: sc.bg, color: sc.text, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, textTransform: 'uppercase' }}>
