@@ -419,7 +419,7 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
       const labelLines = doc.splitTextToSize(label, colW * 0.60); const rh = Math.max(6, labelLines.length * 4.5 + 2.5)
       doc.setFillColor(...(isRepairAction ? (i % 2 === 0 ? ORANGE_LIGHT : WHITE) : (i % 2 === 0 ? LGREY : WHITE))); doc.rect(startX, cy, colW, rh, 'F')
       doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE); doc.text(labelLines, startX + 2.5, cy + 4)
-      doc.setFont('helvetica', 'bold'); doc.setTextColor(isRepairAction ? [...RED] : [...DARK]); doc.text(String(value), startX + colW - 2.5, cy + 4, { align: 'right' }); cy += rh
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(...(isRepairAction ? RED : DARK)); doc.text(String(value), startX + colW - 2.5, cy + 4, { align: 'right' }); cy += rh
     })
 
     // Orange border around repair action section
