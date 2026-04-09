@@ -46,17 +46,11 @@ export default function ProjectDetailPage() {
   const [doorSort,          setDoorSort]          = useState('date')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting,          setDeleting]          = useState(false)
-  const [currentUser,       setCurrentUser]       = useState(null)
-  // Remedial action modal
-  const [actionModal,       setActionModal]       = useState(null)  // inspection obj
-  const [actionNote,        setActionNote]        = useState('')
-  const [actioning,         setActioning]         = useState(false)
   const [remediatedAssets,  setRemediatedAssets]  = useState(new Set())
 
   useEffect(() => {
     fetchData()
     supabase.from('clients').select('*').order('name').then(({ data }) => setClients(data || []))
-    supabase.auth.getUser().then(({ data: { user } }) => setCurrentUser(user))
   }, [id])
 
   async function fetchData() {
@@ -111,31 +105,6 @@ export default function ProjectDetailPage() {
     const { error: projErr } = await supabase.from('projects').delete().eq('id', id)
     if (projErr) { alert('Failed to delete project: ' + projErr.message); setDeleting(false); return }
     navigate('/')
-  }
-
-  async function markActioned() {
-    if (!actionModal) return
-    setActioning(true)
-    await supabase.from('inspections').update({
-      remedial_actioned:    true,
-      remedial_actioned_at: new Date().toISOString(),
-      remedial_actioned_by: currentUser?.email || 'Unknown',
-      remedial_action_note: actionNote.trim() || null,
-    }).eq('id', actionModal.id)
-    setActionModal(null)
-    setActionNote('')
-    setActioning(false)
-    await fetchData()
-  }
-
-  async function undoActioned(inspectionId) {
-    await supabase.from('inspections').update({
-      remedial_actioned:    false,
-      remedial_actioned_at: null,
-      remedial_actioned_by: null,
-      remedial_action_note: null,
-    }).eq('id', inspectionId)
-    await fetchData()
   }
 
   async function exportCsv() {
@@ -249,39 +218,6 @@ export default function ProjectDetailPage() {
                 disabled={deleting} onClick={deleteProject}>{deleting ? 'Deleting…' : 'Yes, Delete'}</button>
               <button style={{ background: 'transparent', border: '1px solid #8A9BAD', borderRadius: 6, padding: '10px 20px', color: '#8A9BAD', fontSize: 14, cursor: 'pointer' }}
                 onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Mark Actioned modal */}
-      {actionModal && (
-        <div style={styles.lightboxOverlay} onClick={() => { setActionModal(null); setActionNote('') }}>
-          <div style={{ background: '#162840', borderRadius: 14, padding: 28, maxWidth: 460, width: '90%', border: '1px solid #4CAF50' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ color: '#fff', margin: '0 0 6px', fontSize: 18 }}>Mark Remedial Actioned</h3>
-            <p style={{ color: GREY, margin: '0 0 6px', fontSize: 13 }}>
-              <strong style={{ color: '#fff' }}>{actionModal.door_location || actionModal.door_asset_id}</strong>
-            </p>
-            {actionModal.recommended_action && (
-              <p style={{ color: '#FF9800', margin: '0 0 16px', fontSize: 13, background: '#FF980011', borderRadius: 6, padding: '8px 12px', border: '1px solid #FF980033' }}>
-                {actionModal.recommended_action}
-              </p>
-            )}
-            <label style={{ color: GREY, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Action Note (optional)</label>
-            <textarea
-              style={{ width: '100%', marginTop: 8, background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, resize: 'vertical', minHeight: 80, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
-              placeholder="e.g. Contractor attended 27/03/2026, closer replaced…"
-              value={actionNote}
-              onChange={e => setActionNote(e.target.value)}
-            />
-            <p style={{ color: GREY, fontSize: 12, margin: '8px 0 20px' }}>Logged as: <strong style={{ color: '#fff' }}>{currentUser?.email}</strong></p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button style={{ background: '#4CAF50', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', opacity: actioning ? 0.6 : 1 }}
-                disabled={actioning} onClick={markActioned}>
-                {actioning ? 'Saving…' : '✓ Confirm Actioned'}
-              </button>
-              <button style={{ background: 'transparent', border: '1px solid #8A9BAD', borderRadius: 8, padding: '10px 18px', color: '#8A9BAD', fontSize: 14, cursor: 'pointer' }}
-                onClick={() => { setActionModal(null); setActionNote('') }}>Cancel</button>
             </div>
           </div>
         </div>
@@ -458,8 +394,6 @@ export default function ProjectDetailPage() {
             expanded={expanded === ins.id}
             onToggle={() => setExpanded(expanded === ins.id ? null : ins.id)}
             onPhoto={setLightbox}
-            onMarkActioned={() => { setActionModal(ins); setActionNote('') }}
-            onUndoActioned={() => undoActioned(ins.id)}
             isRemediated={remediatedAssets.has(ins.door_asset_id)}
           />
         ))}
@@ -468,7 +402,7 @@ export default function ProjectDetailPage() {
   )
 }
 
-function InspectionCard({ inspection: ins, project, expanded, onToggle, onPhoto, onMarkActioned, onUndoActioned, isRemediated }) {
+function InspectionCard({ inspection: ins, project, expanded, onToggle, onPhoto, isRemediated }) {
   const passed    = ins.inspection_passed === 'Pass'
   const passColor = passed ? PASS_COLOR : FAIL_COLOR
   const date      = new Date(ins.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -521,12 +455,8 @@ function InspectionCard({ inspection: ins, project, expanded, onToggle, onPhoto,
     ['Inspector',            (ins.engineer_name && !ins.engineer_name.includes('@')) ? ins.engineer_name : (project?.engineer_name && !project.engineer_name.includes('@')) ? project.engineer_name : ins.engineer_name],
   ].filter(([, v]) => v)
 
-  const actionedAt = ins.remedial_actioned_at
-    ? new Date(ins.remedial_actioned_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
-    : null
-
   return (
-    <div style={{ ...styles.card, opacity: ins.remedial_actioned ? 0.75 : 1 }}>
+    <div style={styles.card}>
       <div style={styles.cardHeader} onClick={onToggle}>
         <div style={{ width: 4, minHeight: 52, background: passColor, borderRadius: 2, flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -539,21 +469,11 @@ function InspectionCard({ inspection: ins, project, expanded, onToggle, onPhoto,
           <div style={{ marginTop: 4, fontSize: 12, color: dueColor }}>
             {doorCategory(ins.doorset_assembly_type) === 'flat' ? 'FLAT' : 'COMMUNAL'} · {dueLabel}
           </div>
-          {/* Actioned info */}
-          {ins.remedial_actioned && (
-            <div style={{ marginTop: 5, fontSize: 12, color: PASS_COLOR, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <span>✓ Actioned {actionedAt} by {ins.remedial_actioned_by}</span>
-              {ins.remedial_action_note && <span style={{ color: GREY }}>· {ins.remedial_action_note}</span>}
-            </div>
-          )}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
           <span style={{ ...styles.badge, background: `${passColor}22`, color: passColor }}>
             {ins.inspection_passed || '—'}
           </span>
-          {ins.remedial_actioned && (
-            <span style={{ ...styles.badge, background: '#4CAF5022', color: '#4CAF50', fontSize: 11 }}>✓ Actioned</span>
-          )}
           {isRemediated && (
             <span style={{ ...styles.badge, background: '#2196F322', color: '#2196F3', fontSize: 11 }}>Remediated</span>
           )}
@@ -561,27 +481,6 @@ function InspectionCard({ inspection: ins, project, expanded, onToggle, onPhoto,
         </div>
       </div>
 
-      {/* Mark actioned / undo bar — shown on fail doors without expanding */}
-      {!passed && (
-        <div style={{ padding: '8px 16px 8px 24px', background: '#0D1F35', borderTop: '1px solid #1A3A5C', display: 'flex', alignItems: 'center', gap: 10 }} onClick={e => e.stopPropagation()}>
-          {ins.remedial_actioned ? (
-            <button
-              style={{ background: 'transparent', border: '1px solid #8A9BAD', borderRadius: 6, padding: '5px 14px', color: '#8A9BAD', fontSize: 12, cursor: 'pointer' }}
-              onClick={onUndoActioned}>
-              Undo Actioned
-            </button>
-          ) : (
-            <button
-              style={{ background: '#4CAF5022', border: '1px solid #4CAF50', borderRadius: 6, padding: '5px 14px', color: '#4CAF50', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-              onClick={onMarkActioned}>
-              ✓ Mark Actioned
-            </button>
-          )}
-          {ins.recommended_action && !ins.remedial_actioned && (
-            <span style={{ color: '#FF9800', fontSize: 12 }}>{ins.recommended_action}</span>
-          )}
-        </div>
-      )}
 
       {expanded && (
         <div style={styles.cardBody}>

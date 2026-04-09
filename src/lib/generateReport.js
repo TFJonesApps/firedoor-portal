@@ -268,7 +268,8 @@ function drawGapDiagram(doc, ins, x, y, colW) {
   const gapLabel = (val) => {
     if (!val) return '—'
     const n = parseGap(val)
-    return n !== null ? `${n}mm` : String(val)
+    if (n === null) return String(val)
+    return n > 8 ? `${n}mm — Over 8mm` : `${n}mm`
   }
 
   const boxW = colW; const boxH = 62
@@ -386,7 +387,8 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
   ] 
 
   const colW = (CW - 4) / 2; let leftY = headY + 25, rightY = headY + 25
-  const needsRepairBox = ins.recommended_action?.toLowerCase().includes('repair')
+  const actionLower = ins.recommended_action?.toLowerCase() || ''
+  const needsRepairBox = actionLower.includes('repair') || actionLower.includes('replace')
   for (const section of sections) {
     const active = section.fields.filter(([, v]) => v)
     if (active.length === 0) continue
@@ -402,8 +404,9 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
       doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...WHITE); doc.text('ACTION REQUIRED', startX + 2.5, cy + 4.5)
       // Severity badge
       const badgeW = 22; const badgeX = startX + colW - badgeW - 2
+      const severityLabel = actionLower.includes('replace') ? 'REPLACE' : 'REPAIR'
       doc.setFillColor(...RED); doc.roundedRect(badgeX, cy + 1, badgeW, 4.5, 1, 1, 'F')
-      doc.setFontSize(5.5); doc.setTextColor(...WHITE); doc.text('REPAIR', badgeX + badgeW / 2, cy + 4.2, { align: 'center' })
+      doc.setFontSize(5.5); doc.setTextColor(...WHITE); doc.text(severityLabel, badgeX + badgeW / 2, cy + 4.2, { align: 'center' })
     } else {
       doc.setFillColor(...NAVY); doc.rect(startX, cy, colW, 6.5, 'F')
       doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...YELLOW); doc.text(section.title.toUpperCase(), startX + 2.5, cy + 4.5)
