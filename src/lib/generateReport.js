@@ -254,28 +254,7 @@ async function historyCoverPage(doc, logo, project, latest, assetId, pageNum, to
 // ─── Gap Diagram ─────────────────────────────────────────────────────────────
 // Draws a rectangular door outline with gap measurements on each side.
 // Values over 3mm are red, within tolerance are green.
-function drawGapDiagram(doc, ins, x, y) {
-  const doorW = 32; const doorH = 46
-  const padX = 18; const padTop = 12; const padBot = 10
-  const boxW = doorW + padX * 2; const boxH = doorH + padTop + padBot
-  const doorX = x + (boxW - doorW) / 2
-  const doorY = y + padTop
-
-  // Title
-  doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE)
-  doc.text('Gaps', x + boxW / 2, y + 5, { align: 'center' })
-
-  // Background
-  doc.setFillColor(...LGREY); doc.roundedRect(x, y + 7, boxW, boxH - 7, 2, 2, 'F')
-
-  // Door rectangle
-  doc.setDrawColor(...MGREY); doc.setLineWidth(0.8)
-  doc.setFillColor(...WHITE); doc.rect(doorX, doorY, doorW, doorH, 'FD')
-  doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.2)
-
-  // Door label
-  doc.setFontSize(5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE)
-
+function drawGapDiagram(doc, ins, x, y, colW) {
   const parseGap = (val) => {
     if (!val) return null
     const n = parseFloat(String(val).replace(/[^0-9.]/g, ''))
@@ -286,44 +265,60 @@ function drawGapDiagram(doc, ins, x, y) {
     if (n === null) return SLATE
     return n > 3 ? RED : GREEN
   }
-  const gapLabel = (val, suffix) => {
+  const gapLabel = (val) => {
     if (!val) return '—'
     const n = parseGap(val)
     return n !== null ? `${n}mm` : String(val)
   }
 
-  doc.setFontSize(7); doc.setFont('helvetica', 'bold')
+  const boxW = colW; const boxH = 62
+  const doorW = 28; const doorH = 34
+  const doorX = x + (boxW - doorW) / 2
+  const doorY = y + 18
 
-  // Head (top)
-  if (ins.gap_head) {
-    doc.setTextColor(...gapColor(ins.gap_head))
-    doc.text(`Head ${gapLabel(ins.gap_head)}`, x + boxW / 2, doorY - 2, { align: 'center' })
-  }
+  // Title bar
+  doc.setFillColor(...NAVY); doc.rect(x, y, boxW, 6.5, 'F')
+  doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...YELLOW)
+  doc.text('DOOR GAP MEASUREMENTS', x + 2.5, y + 4.5)
 
-  // Threshold (bottom)
-  if (ins.gap_threshold_mm) {
-    doc.setTextColor(...gapColor(ins.gap_threshold_mm))
-    doc.text(`Threshold ${gapLabel(ins.gap_threshold_mm)}`, x + boxW / 2, doorY + doorH + 5, { align: 'center' })
-  }
+  // Background
+  doc.setFillColor(...LGREY); doc.rect(x, y + 6.5, boxW, boxH - 6.5, 'F')
+
+  // Door rectangle with subtle shadow
+  doc.setFillColor(230, 230, 230); doc.rect(doorX + 0.5, doorY + 0.5, doorW, doorH, 'F')
+  doc.setDrawColor(...MGREY); doc.setLineWidth(0.6)
+  doc.setFillColor(...WHITE); doc.rect(doorX, doorY, doorW, doorH, 'FD')
+  doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.2)
+
+  // "DOOR" label inside rectangle
+  doc.setFontSize(5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...MGREY)
+  doc.text('DOOR', doorX + doorW / 2, doorY + doorH / 2 + 1, { align: 'center' })
+
+  // Head (top) — centered above door
+  doc.setFontSize(6); doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...gapColor(ins.gap_head))
+  doc.text(`Head ${gapLabel(ins.gap_head)}`, x + boxW / 2, doorY - 3, { align: 'center' })
+
+  // Threshold (bottom) — centered below door
+  doc.setTextColor(...gapColor(ins.gap_threshold_mm))
+  doc.text(`Threshold ${gapLabel(ins.gap_threshold_mm)}`, x + boxW / 2, doorY + doorH + 6, { align: 'center' })
 
   // Hinge side (left)
-  if (ins.gap_hinge_side) {
-    doc.setTextColor(...gapColor(ins.gap_hinge_side))
-    const hingeText = `Hinge\n${gapLabel(ins.gap_hinge_side)}`
-    doc.setFontSize(6)
-    doc.text('Hinge', doorX - 2, doorY + doorH / 2 - 2, { align: 'right' })
-    doc.setFontSize(7)
-    doc.text(gapLabel(ins.gap_hinge_side), doorX - 2, doorY + doorH / 2 + 4, { align: 'right' })
-  }
+  doc.setTextColor(...gapColor(ins.gap_hinge_side))
+  doc.text('Hinge', doorX - 3, doorY + doorH / 2 - 1, { align: 'right' })
+  doc.text(gapLabel(ins.gap_hinge_side), doorX - 3, doorY + doorH / 2 + 4, { align: 'right' })
 
-  // Lock/Closing side (right)
-  if (ins.gap_lock_side) {
-    doc.setTextColor(...gapColor(ins.gap_lock_side))
-    doc.setFontSize(6)
-    doc.text('Closing', doorX + doorW + 2, doorY + doorH / 2 - 2, { align: 'left' })
-    doc.setFontSize(7)
-    doc.text(gapLabel(ins.gap_lock_side), doorX + doorW + 2, doorY + doorH / 2 + 4, { align: 'left' })
-  }
+  // Closing side (right)
+  doc.setTextColor(...gapColor(ins.gap_lock_side))
+  doc.text('Closing', doorX + doorW + 3, doorY + doorH / 2 - 1, { align: 'left' })
+  doc.text(gapLabel(ins.gap_lock_side), doorX + doorW + 3, doorY + doorH / 2 + 4, { align: 'left' })
+
+  // Border
+  doc.setDrawColor(...MGREY); doc.setLineWidth(0.3)
+  doc.rect(x, y, boxW, boxH)
+  doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.2)
+
+  return boxH
 }
 
 // ─── Inspection Detail Page ─────────────────────────────────────────────────── 
@@ -416,10 +411,12 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
     cy += 6.5
 
     active.forEach(([label, value], i) => {
-      const labelLines = doc.splitTextToSize(label, colW * 0.60); const rh = Math.max(6, labelLines.length * 4.5 + 2.5)
+      const labelLines = doc.splitTextToSize(label, colW * 0.45)
+      const valLines = doc.splitTextToSize(String(value), colW * 0.45)
+      const rh = Math.max(6, Math.max(labelLines.length, valLines.length) * 4.5 + 2.5)
       doc.setFillColor(...(isRepairAction ? (i % 2 === 0 ? ORANGE_LIGHT : WHITE) : (i % 2 === 0 ? LGREY : WHITE))); doc.rect(startX, cy, colW, rh, 'F')
       doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE); doc.text(labelLines, startX + 2.5, cy + 4)
-      doc.setFont('helvetica', 'bold'); doc.setTextColor(...(isRepairAction ? RED : DARK)); doc.text(String(value), startX + colW - 2.5, cy + 4, { align: 'right' }); cy += rh
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(...(isRepairAction ? RED : DARK)); doc.text(valLines, startX + colW - 2.5, cy + 4, { align: 'right' }); cy += rh
     })
 
     // Orange border around repair action section
@@ -435,13 +432,11 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
     if (section.title === 'Condition & Gaps' && ins.gap_3mm_tolerance && ins.gap_3mm_tolerance !== 'Yes') {
       const hasGaps = ins.gap_head || ins.gap_hinge_side || ins.gap_lock_side || ins.gap_threshold_mm
       if (hasGaps) {
-        // Place diagram in the same column, below the section
-        const diagX = startX
-        let diagY = leftY <= rightY ? leftY : rightY
-        if (startX === ML) diagY = leftY; else diagY = rightY
-        drawGapDiagram(doc, ins, diagX, diagY)
-        const diagHeight = 52
-        if (startX === ML) leftY = diagY + diagHeight + 4; else rightY = diagY + diagHeight + 4
+        // Place in whichever column is shorter
+        const diagX = leftY <= rightY ? ML : ML + colW + 4
+        const diagY = leftY <= rightY ? leftY : rightY
+        const diagH = drawGapDiagram(doc, ins, diagX, diagY, colW)
+        if (diagX === ML) leftY = diagY + diagH + 4; else rightY = diagY + diagH + 4
       }
     }
   }
@@ -458,7 +453,8 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
     const numRows     = Math.ceil(photos.length / 2)
     let py            = Math.max(leftY, rightY) + 4
     const available   = H - FOOTER_H - py - HEADER_H  // total vertical space left
-    const CELL_H      = Math.min(55, (available - (numRows - 1) * ROW_GAP - numRows * LABEL_H) / numRows)
+    const idealCellH  = (available - (numRows - 1) * ROW_GAP - numRows * LABEL_H) / numRows
+    const CELL_H      = Math.max(25, Math.min(55, idealCellH))  // minimum 25mm per photo
     const ROW_H       = CELL_H + LABEL_H + ROW_GAP
 
     // Header bar
