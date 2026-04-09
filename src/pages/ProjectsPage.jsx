@@ -527,7 +527,7 @@ export default function ProjectsPage({ role }) {
                         ? <p style={{ color: '#4CAF50', fontSize: 13 }}>✓ No outstanding remedials.</p>
                         : remedialsOutstanding.map(ins => (
                           <div key={ins.id} style={{ ...s.feedRow, borderLeft: '3px solid #F44336', paddingLeft: 10, cursor: 'pointer' }}
-                            onClick={() => ins.project_id && navigate(`/project/${ins.project_id}`)}>
+                            onClick={() => navigate('/remedials')}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={s.feedDoor}>{ins.door_location || ins.door_asset_id || '—'}</div>
                               <div style={s.feedProject}>{ins.projects?.name || '—'} · {ins.projects?.client_name || '—'}</div>
