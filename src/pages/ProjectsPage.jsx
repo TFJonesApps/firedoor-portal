@@ -382,8 +382,8 @@ export default function ProjectsPage({ role }) {
           title="Jump to reinspections due" />
         <div style={s.statsDivider} />
         <StatChip label="Remedials Open"    value={remedialCount}      color={remedialCount > 0 ? '#F44336' : '#8A9BAD'}
-          onClick={() => { const el = document.getElementById('panel-remedials'); el?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }}
-          title="Jump to remedial works" />
+          onClick={() => navigate('/remedials')}
+          title="Manage remedial works" />
         <div style={s.statsDivider} />
         <StatChip label="Projects This Month" value={thisMonthCount}   color="#EEFF00"
           onClick={() => navigate('/projects')}
@@ -518,7 +518,10 @@ export default function ProjectsPage({ role }) {
 
                 {id === 'remedials' && (
                   <>
-                    <SectionTitle>Remedial Works Outstanding</SectionTitle>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <SectionTitle style={{ margin: 0 }}>Remedial Works Outstanding</SectionTitle>
+                      <button onClick={() => navigate('/remedials')} style={{ background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '4px 12px', color: '#EEFF00', fontSize: 11, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }} title="Manage remedials">Manage</button>
+                    </div>
                     <div style={s.panel}>
                       {remedialsOutstanding.length === 0
                         ? <p style={{ color: '#4CAF50', fontSize: 13 }}>✓ No outstanding remedials.</p>

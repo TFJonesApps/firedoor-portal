@@ -51,6 +51,7 @@ export default function ProjectDetailPage() {
   const [actionModal,       setActionModal]       = useState(null)  // inspection obj
   const [actionNote,        setActionNote]        = useState('')
   const [actioning,         setActioning]         = useState(false)
+  const [remediatedAssets,  setRemediatedAssets]  = useState(new Set())
 
   useEffect(() => {
     fetchData()
@@ -70,6 +71,16 @@ export default function ProjectDetailPage() {
       .eq('project_id', id)
       .order('created_at', { ascending: false })
     setInspections(ins || [])
+    // Check which doors have been remediated (completed remedial in any project)
+    const assetIds = (ins || []).map(i => i.door_asset_id).filter(Boolean)
+    if (assetIds.length > 0) {
+      const { data: rems } = await supabase
+        .from('remedials')
+        .select('door_asset_id')
+        .in('door_asset_id', assetIds)
+        .eq('status', 'completed')
+      setRemediatedAssets(new Set((rems || []).map(r => r.door_asset_id)))
+    }
     setLoading(false)
   }
 
@@ -449,6 +460,7 @@ export default function ProjectDetailPage() {
             onPhoto={setLightbox}
             onMarkActioned={() => { setActionModal(ins); setActionNote('') }}
             onUndoActioned={() => undoActioned(ins.id)}
+            isRemediated={remediatedAssets.has(ins.door_asset_id)}
           />
         ))}
       </div>
@@ -456,7 +468,7 @@ export default function ProjectDetailPage() {
   )
 }
 
-function InspectionCard({ inspection: ins, project, expanded, onToggle, onPhoto, onMarkActioned, onUndoActioned }) {
+function InspectionCard({ inspection: ins, project, expanded, onToggle, onPhoto, onMarkActioned, onUndoActioned, isRemediated }) {
   const passed    = ins.inspection_passed === 'Pass'
   const passColor = passed ? PASS_COLOR : FAIL_COLOR
   const date      = new Date(ins.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -541,6 +553,9 @@ function InspectionCard({ inspection: ins, project, expanded, onToggle, onPhoto,
           </span>
           {ins.remedial_actioned && (
             <span style={{ ...styles.badge, background: '#4CAF5022', color: '#4CAF50', fontSize: 11 }}>✓ Actioned</span>
+          )}
+          {isRemediated && (
+            <span style={{ ...styles.badge, background: '#2196F322', color: '#2196F3', fontSize: 11 }}>Remediated</span>
           )}
           <span style={{ color: GREY, fontSize: 16 }}>{expanded ? '▲' : '▼'}</span>
         </div>

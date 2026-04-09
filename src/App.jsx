@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase'
 import LoginPage from './pages/LoginPage'
 import ProjectsPage from './pages/ProjectsPage'
 import ProjectsManagePage from './pages/ProjectsManagePage'
+import RemedialsPage from './pages/RemedialsPage'
 import ProjectDetailPage from './pages/ProjectDetailPage'
 import ClientLoginPage from './pages/ClientLoginPage'
 import ClientScanPage from './pages/ClientScanPage'
@@ -68,6 +69,7 @@ export default function App() {
         <Route path="/login"       element={!session ? <LoginPage />         : <Navigate to={roleHome} />} />
         <Route path="/"            element={isPortalUser ? <ProjectsPage role={role} />      : <Navigate to={session ? roleHome : '/login'} />} />
         <Route path="/projects"    element={isPortalUser ? <ProjectsManagePage /> : <Navigate to={session ? roleHome : '/login'} />} />
+        <Route path="/remedials"   element={isPortalUser ? <RemedialsPage /> : <Navigate to={session ? roleHome : '/login'} />} />
         <Route path="/project/:id" element={isPortalUser ? <ProjectDetailPage /> : <Navigate to={session ? roleHome : '/login'} />} />
         <Route path="/door-history" element={isPortalUser ? <DoorHistoryPage />   : <Navigate to={session ? roleHome : '/login'} />} />
 

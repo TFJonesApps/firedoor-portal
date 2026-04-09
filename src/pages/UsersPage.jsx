@@ -184,6 +184,7 @@ export default function UsersPage() {
                   <option value="admin">Admin</option>
                   <option value="user">User</option>
                   <option value="inspector">Inspector</option>
+                  <option value="joiner">Fire Door Joiner</option>
                   <option value="client">Client</option>
                 </select>
               </div>
@@ -239,6 +240,7 @@ export default function UsersPage() {
                           <option value="admin">Admin</option>
                           <option value="user">User</option>
                           <option value="inspector">Inspector</option>
+                          <option value="joiner">Fire Door Joiner</option>
                           <option value="client">Client</option>
                         </select>
                       </td>

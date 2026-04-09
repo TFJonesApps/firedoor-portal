@@ -1,15 +1,17 @@
 import jsPDF from 'jspdf'
 
 // ─── Palette ────────────────────────────────────────────────────────────────── 
-const NAVY = [13, 31, 53] 
-const YELLOW = [238, 255, 0] 
-const WHITE = [255, 255, 255] 
-const LGREY = [246, 248, 250] 
-const MGREY = [210, 217, 226] 
-const SLATE = [95, 112, 130] 
-const DARK = [28, 38, 52] 
-const GREEN = [22, 101, 52] 
-const RED = [153, 27, 27] 
+const NAVY = [13, 31, 53]
+const YELLOW = [238, 255, 0]
+const WHITE = [255, 255, 255]
+const LGREY = [246, 248, 250]
+const MGREY = [210, 217, 226]
+const SLATE = [95, 112, 130]
+const DARK = [28, 38, 52]
+const GREEN = [22, 101, 52]
+const RED = [153, 27, 27]
+const ORANGE = [255, 140, 0]
+const ORANGE_LIGHT = [255, 248, 240]
 
 const W = 210 
 const H = 297 
@@ -249,6 +251,81 @@ async function historyCoverPage(doc, logo, project, latest, assetId, pageNum, to
   drawFooter(doc, pageNum, totalPages)
 }
 
+// ─── Gap Diagram ─────────────────────────────────────────────────────────────
+// Draws a rectangular door outline with gap measurements on each side.
+// Values over 3mm are red, within tolerance are green.
+function drawGapDiagram(doc, ins, x, y) {
+  const doorW = 32; const doorH = 46
+  const padX = 18; const padTop = 12; const padBot = 10
+  const boxW = doorW + padX * 2; const boxH = doorH + padTop + padBot
+  const doorX = x + (boxW - doorW) / 2
+  const doorY = y + padTop
+
+  // Title
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE)
+  doc.text('Gaps', x + boxW / 2, y + 5, { align: 'center' })
+
+  // Background
+  doc.setFillColor(...LGREY); doc.roundedRect(x, y + 7, boxW, boxH - 7, 2, 2, 'F')
+
+  // Door rectangle
+  doc.setDrawColor(...MGREY); doc.setLineWidth(0.8)
+  doc.setFillColor(...WHITE); doc.rect(doorX, doorY, doorW, doorH, 'FD')
+  doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.2)
+
+  // Door label
+  doc.setFontSize(5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE)
+
+  const parseGap = (val) => {
+    if (!val) return null
+    const n = parseFloat(String(val).replace(/[^0-9.]/g, ''))
+    return isNaN(n) ? null : n
+  }
+  const gapColor = (val) => {
+    const n = parseGap(val)
+    if (n === null) return SLATE
+    return n > 3 ? RED : GREEN
+  }
+  const gapLabel = (val, suffix) => {
+    if (!val) return '—'
+    const n = parseGap(val)
+    return n !== null ? `${n}mm` : String(val)
+  }
+
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold')
+
+  // Head (top)
+  if (ins.gap_head) {
+    doc.setTextColor(...gapColor(ins.gap_head))
+    doc.text(`Head ${gapLabel(ins.gap_head)}`, x + boxW / 2, doorY - 2, { align: 'center' })
+  }
+
+  // Threshold (bottom)
+  if (ins.gap_threshold_mm) {
+    doc.setTextColor(...gapColor(ins.gap_threshold_mm))
+    doc.text(`Threshold ${gapLabel(ins.gap_threshold_mm)}`, x + boxW / 2, doorY + doorH + 5, { align: 'center' })
+  }
+
+  // Hinge side (left)
+  if (ins.gap_hinge_side) {
+    doc.setTextColor(...gapColor(ins.gap_hinge_side))
+    const hingeText = `Hinge\n${gapLabel(ins.gap_hinge_side)}`
+    doc.setFontSize(6)
+    doc.text('Hinge', doorX - 2, doorY + doorH / 2 - 2, { align: 'right' })
+    doc.setFontSize(7)
+    doc.text(gapLabel(ins.gap_hinge_side), doorX - 2, doorY + doorH / 2 + 4, { align: 'right' })
+  }
+
+  // Lock/Closing side (right)
+  if (ins.gap_lock_side) {
+    doc.setTextColor(...gapColor(ins.gap_lock_side))
+    doc.setFontSize(6)
+    doc.text('Closing', doorX + doorW + 2, doorY + doorH / 2 - 2, { align: 'left' })
+    doc.setFontSize(7)
+    doc.text(gapLabel(ins.gap_lock_side), doorX + doorW + 2, doorY + doorH / 2 + 4, { align: 'left' })
+  }
+}
+
 // ─── Inspection Detail Page ─────────────────────────────────────────────────── 
 async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) { 
   const passed = ins.inspection_passed === 'Pass' 
@@ -313,22 +390,61 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
     ]} 
   ] 
 
-  const colW = (CW - 4) / 2; let leftY = headY + 25, rightY = headY + 25 
-  for (const section of sections) { 
-    const active = section.fields.filter(([, v]) => v) 
-    if (active.length === 0) continue 
-    let startX = leftY <= rightY ? ML : ML + colW + 4 
-    let cy = leftY <= rightY ? leftY : rightY 
-    doc.setFillColor(...NAVY); doc.rect(startX, cy, colW, 6.5, 'F') 
-    doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...YELLOW); doc.text(section.title.toUpperCase(), startX + 2.5, cy + 4.5); cy += 6.5 
-    active.forEach(([label, value], i) => { 
-      const labelLines = doc.splitTextToSize(label, colW * 0.60); const rh = Math.max(6, labelLines.length * 4.5 + 2.5) 
-      doc.setFillColor(...(i % 2 === 0 ? LGREY : WHITE)); doc.rect(startX, cy, colW, rh, 'F') 
-      doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE); doc.text(labelLines, startX + 2.5, cy + 4) 
-      doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK); doc.text(String(value), startX + colW - 2.5, cy + 4, { align: 'right' }); cy += rh 
-    }) 
-    if (leftY <= rightY) leftY = cy + 4; else rightY = cy + 4 
-  } 
+  const colW = (CW - 4) / 2; let leftY = headY + 25, rightY = headY + 25
+  const needsRepairBox = ins.recommended_action?.toLowerCase().includes('repair')
+  for (const section of sections) {
+    const active = section.fields.filter(([, v]) => v)
+    if (active.length === 0) continue
+    const isAction = section.title === 'Outcome & Actions'
+    const isRepairAction = isAction && needsRepairBox
+    let startX = leftY <= rightY ? ML : ML + colW + 4
+    let cy = leftY <= rightY ? leftY : rightY
+    const sectionStartY = cy
+
+    // Header bar — orange for repair actions, navy otherwise
+    if (isRepairAction) {
+      doc.setFillColor(...ORANGE); doc.rect(startX, cy, colW, 6.5, 'F')
+      doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...WHITE); doc.text('ACTION REQUIRED', startX + 2.5, cy + 4.5)
+      // Severity badge
+      const badgeW = 22; const badgeX = startX + colW - badgeW - 2
+      doc.setFillColor(...RED); doc.roundedRect(badgeX, cy + 1, badgeW, 4.5, 1, 1, 'F')
+      doc.setFontSize(5.5); doc.setTextColor(...WHITE); doc.text('REPAIR', badgeX + badgeW / 2, cy + 4.2, { align: 'center' })
+    } else {
+      doc.setFillColor(...NAVY); doc.rect(startX, cy, colW, 6.5, 'F')
+      doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...YELLOW); doc.text(section.title.toUpperCase(), startX + 2.5, cy + 4.5)
+    }
+    cy += 6.5
+
+    active.forEach(([label, value], i) => {
+      const labelLines = doc.splitTextToSize(label, colW * 0.60); const rh = Math.max(6, labelLines.length * 4.5 + 2.5)
+      doc.setFillColor(...(isRepairAction ? (i % 2 === 0 ? ORANGE_LIGHT : WHITE) : (i % 2 === 0 ? LGREY : WHITE))); doc.rect(startX, cy, colW, rh, 'F')
+      doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE); doc.text(labelLines, startX + 2.5, cy + 4)
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(isRepairAction ? [...RED] : [...DARK]); doc.text(String(value), startX + colW - 2.5, cy + 4, { align: 'right' }); cy += rh
+    })
+
+    // Orange border around repair action section
+    if (isRepairAction) {
+      doc.setDrawColor(...ORANGE); doc.setLineWidth(0.6)
+      doc.rect(startX, sectionStartY, colW, cy - sectionStartY)
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.2)
+    }
+
+    if (leftY <= rightY) leftY = cy + 4; else rightY = cy + 4
+
+    // Gap diagram — draw after Condition & Gaps section when gaps are out of tolerance
+    if (section.title === 'Condition & Gaps' && ins.gap_3mm_tolerance && ins.gap_3mm_tolerance !== 'Yes') {
+      const hasGaps = ins.gap_head || ins.gap_hinge_side || ins.gap_lock_side || ins.gap_threshold_mm
+      if (hasGaps) {
+        // Place diagram in the same column, below the section
+        const diagX = startX
+        let diagY = leftY <= rightY ? leftY : rightY
+        if (startX === ML) diagY = leftY; else diagY = rightY
+        drawGapDiagram(doc, ins, diagX, diagY)
+        const diagHeight = 52
+        if (startX === ML) leftY = diagY + diagHeight + 4; else rightY = diagY + diagHeight + 4
+      }
+    }
+  }
 
   const photos = [['Outside', ins.photo_outside_url], ['Inside', ins.photo_inside_url], ['Photo 1', ins.photo1_url], ['Photo 2', ins.photo2_url], ['Photo 3', ins.photo3_url], ['Photo 4', ins.photo4_url], ['Photo 5', ins.photo5_url], ['Photo 6', ins.photo6_url]].filter(([, u]) => u)
   if (photos.length > 0) {
