@@ -24,7 +24,7 @@ export default function UsersPage() {
     setLoading(true)
     const { data } = await supabase
       .from('user_profiles')
-      .select('id, email, role, client_id, disabled, clients(name)')
+      .select('id, email, role, client_id, disabled, full_name, clients(name)')
       .order('email')
     setUsers(data || [])
     setLoading(false)
@@ -100,7 +100,7 @@ export default function UsersPage() {
   }
 
   function getEdit(user) {
-    return edits[user.id] ?? { role: user.role, client_id: user.client_id }
+    return edits[user.id] ?? { role: user.role, client_id: user.client_id, full_name: user.full_name || '' }
   }
 
   function setField(userId, field, value) {
@@ -115,7 +115,7 @@ export default function UsersPage() {
     const edit = getEdit(user)
     await supabase
       .from('user_profiles')
-      .update({ role: edit.role, client_id: edit.client_id || null })
+      .update({ role: edit.role, client_id: edit.client_id || null, full_name: edit.full_name.trim() || null })
       .eq('id', user.id)
     setEdits(prev => { const n = { ...prev }; delete n[user.id]; return n })
     await loadUsers()

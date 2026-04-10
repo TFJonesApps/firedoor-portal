@@ -62,7 +62,8 @@ export async function generateProjectReport(project, inspections, onProgress) {
     if ((i + 1) % 3 === 0) await yieldToBrowser()
   }
 
-  const parts = [project.client_name, project.name, project.postcode || project.address].filter(Boolean).map(s => s.trim())
+  const dateStr2 = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-')
+  const parts = [project.client_name, project.order_number, project.name, project.postcode || project.address, dateStr2].filter(Boolean).map(s => s.trim())
   const filename = parts.join(' - ').replace(/[/\\?%*:|"<>]/g, '') + '.pdf'
   doc.save(filename)
 }
@@ -72,9 +73,13 @@ export async function generateSingleInspectionReport(project, inspection) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' }) 
   const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null) 
   await inspectionPage(doc, logo, project, inspection, 1, 1) 
-  const dateStr = new Date(inspection.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) 
-  const loc = (inspection.door_location || 'Door').replace(/[/\\?%*:|"<>]/g, '') 
-  doc.save(`${loc} - ${dateStr}.pdf`) 
+  const dateStr = new Date(inspection.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-')
+  const loc = (inspection.door_location || 'Door').replace(/[/\\?%*:|"<>]/g, '')
+  const client = (project.client_name || '').replace(/[/\\?%*:|"<>]/g, '')
+  const order = (project.order_number || '').replace(/[/\\?%*:|"<>]/g, '')
+  const site = (project.address || project.postcode || '').replace(/[/\\?%*:|"<>]/g, '')
+  const singleParts = [client, order, site, loc, dateStr].filter(Boolean).map(s => s.trim())
+  doc.save(singleParts.join(' - ') + '.pdf') 
 } 
 
 // ─── Entry point: Full History Report ───────────────────────────────────────── 
@@ -105,7 +110,9 @@ export async function generateFullHistoryReport(assetId, inspections, remedials 
     if ((i + 1) % 3 === 0) await yieldToBrowser()
   }
 
-  doc.save(`History_${assetId}.pdf`)
+  const histDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-')
+  const histParts = [project.client_name, project.name, assetId, histDate].filter(Boolean).map(s => s.trim().replace(/[/\\?%*:|"<>]/g, ''))
+  doc.save('History - ' + histParts.join(' - ') + '.pdf')
 }
 
 // ─── Cover Page (Project Report) ───────────────────────────────────────────── 
@@ -184,7 +191,7 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
 
   const infoRows = [
     ['Client', project.client_name || '—'],
-    ['Fire Door Inspector', (project.engineer_name && !project.engineer_name.includes('@')) ? project.engineer_name : '—'],
+    ['Fire Door Inspector', [project.engineer_name, inspections[0]?.engineer_name].find(n => n && !n.includes('@')) || '—'],
     ['Address', [project.address, project.postcode].filter(Boolean).join(', ') || '—'],
     project.order_number ? ['Order Number', project.order_number] : null,
     ['Report Date', dateStr],
@@ -363,7 +370,7 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
   doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255) 
   doc.text(passLabel, badgeX + badgeW / 2, headY + 11, { align: 'center' }) 
 
-  const inspectorName = (ins.engineer_name && !ins.engineer_name.includes('@')) ? ins.engineer_name : project.engineer_name || ins.engineer_name
+  const inspectorName = [ins.engineer_name, project.engineer_name].find(n => n && !n.includes('@')) || null
   const meta = [ins.door_asset_id && `Asset ID: ${ins.door_asset_id}`, ins.fire_rating, new Date(ins.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }), inspectorName && `Inspector: ${inspectorName}`].filter(Boolean).join(' · ')
   doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE); doc.text(meta, ML + 7, headY + headH - 4) 
 
@@ -569,8 +576,15 @@ export async function generateRemedialEvidence(remedial) {
   const totalPhotos = (remedial.before_photo_urls?.length || 0) + (remedial.after_photo_urls?.length || 0)
   const totalPages = totalPhotos > 6 ? 2 : 1
   await remedialEvidencePage(doc, logo, remedial, 1, totalPages)
-  const location = remedial.inspections?.door_location || remedial.door_asset_id || 'remedial'
-  doc.save(`Remedial_Evidence_${location.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`)
+  const remDate = new Date(remedial.completed_at || remedial.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-')
+  const remParts = [
+    remedial.projects?.client_name,
+    remedial.projects?.name,
+    remedial.inspections?.door_location || remedial.door_asset_id,
+    remedial.joiner_name,
+    remDate,
+  ].filter(Boolean).map(s => s.trim().replace(/[/\\?%*:|"<>]/g, ''))
+  doc.save('Remedial - ' + remParts.join(' - ') + '.pdf')
 }
 
 // ─── Remedial Evidence Page (reusable for embedding in history) ──────────────
