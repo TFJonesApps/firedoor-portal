@@ -13,8 +13,8 @@ export default function UsersPage() {
   const [creating, setCreating]     = useState(false)
   const [createError, setCreateError] = useState('')
   const [newUser, setNewUser] = useState({ email: '', password: '', role: 'client', client_id: '', full_name: '' })
-  const [confirmDelete, setConfirmDelete] = useState(null) // user id pending delete
-  const [actioning, setActioning] = useState(null) // user id being actioned
+  const [confirmDelete, setConfirmDelete] = useState(null) 
+  const [actioning, setActioning] = useState(null) 
 
   useEffect(() => {
     Promise.all([loadUsers(), loadClients()])
@@ -48,7 +48,6 @@ export default function UsersPage() {
       body: JSON.stringify(body),
     })
     const text = await res.text()
-    console.log('Edge Function response:', res.status, text)
     let json
     try { json = JSON.parse(text) } catch { throw new Error(text || `Request failed (${res.status})`) }
     if (!res.ok) throw new Error(json.error || json.message || `Request failed (${res.status})`)
@@ -149,7 +148,6 @@ export default function UsersPage() {
           </button>
         </div>
 
-        {/* Create user form */}
         {showCreate && (
           <form onSubmit={createUser} style={s.createForm}>
             <div style={s.formGrid}>
@@ -233,7 +231,7 @@ export default function UsersPage() {
                   <th style={{ ...s.th, ...s.thRole }}>Role</th>
                   <th style={{ ...s.th, ...s.thClient }}>Client</th>
                   <th style={{ ...s.th, ...s.thStatus }}>Status</th>
-                  <th style={s.th}></th>
+                  <th style={{ ...s.th, ...s.thAction }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -245,7 +243,7 @@ export default function UsersPage() {
                   return (
                     <tr key={user.id} style={{ ...s.tr, opacity: user.disabled ? 0.6 : 1 }}>
                       <td style={s.td}>
-                        <span style={s.email}>{user.email || <span style={s.noEmail}>No email — user must log in once</span>}</span>
+                        <span style={s.email}>{user.email || <span style={s.noEmail}>No email</span>}</span>
                       </td>
                       <td style={s.td}>
                         <input
@@ -256,7 +254,7 @@ export default function UsersPage() {
                           onChange={e => setField(user.id, 'full_name', e.target.value)}
                         />
                       </td>
-                      <td style={{ ...s.td, ...s.tdRole }}>
+                      <td style={s.td}>
                         <select style={s.select} value={edit.role || 'client'} onChange={e => setField(user.id, 'role', e.target.value)}>
                           <option value="admin">Admin</option>
                           <option value="user">User</option>
@@ -265,7 +263,7 @@ export default function UsersPage() {
                           <option value="client">Client</option>
                         </select>
                       </td>
-                      <td style={{ ...s.td, ...s.tdClient }}>
+                      <td style={s.td}>
                         <select
                           style={s.select}
                           value={edit.client_id || ''}
@@ -276,28 +274,28 @@ export default function UsersPage() {
                           {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                       </td>
-                      <td style={{ ...s.td, ...s.tdStatus }}>
+                      <td style={s.tdStatus}>
                         <span style={{ ...s.badge, background: user.disabled ? '#F4433622' : '#4CAF5022', color: user.disabled ? '#F44336' : '#4CAF50', border: `1px solid ${user.disabled ? '#F44336' : '#4CAF50'}` }}>
-                          {user.disabled ? 'Disabled' : 'Active'}
+                          {user.disabled ? 'Off' : 'Active'}
                         </span>
                       </td>
                       <td style={s.tdAction}>
                         {pending ? (
                           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
-                            <span style={{ color: '#F44336', fontSize: 13, fontWeight: 600 }}>Delete?</span>
+                            <span style={{ color: '#F44336', fontSize: 12, fontWeight: 600 }}>Delete?</span>
                             <button style={s.deleteConfirmBtn} onClick={() => deleteUser(user.id)} disabled={busy}>
-                              {busy ? '…' : 'Yes, Delete'}
+                              {busy ? '…' : 'Yes'}
                             </button>
-                            <button style={s.cancelBtn} onClick={() => setConfirmDelete(null)}>Cancel</button>
+                            <button style={s.cancelBtn} onClick={() => setConfirmDelete(null)}>No</button>
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                             <button
                               style={{ ...s.saveBtn, opacity: dirty ? 1 : 0.3, cursor: dirty ? 'pointer' : 'default' }}
                               disabled={!dirty || saving === user.id}
                               onClick={() => save(user)}
                             >
-                              {saving === user.id ? 'Saving…' : 'Save'}
+                              {saving === user.id ? '…' : 'Save'}
                             </button>
                             <button
                               style={{ ...s.disableBtn, background: user.disabled ? '#4CAF5022' : '#FF980022', color: user.disabled ? '#4CAF50' : '#FF9800', border: `1px solid ${user.disabled ? '#4CAF50' : '#FF9800'}` }}
@@ -333,7 +331,7 @@ const s = {
   headerRight:     { display: 'flex', alignItems: 'center', gap: 12 },
   logo:            { height: 42, objectFit: 'contain' },
   backBtn:         { background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '7px 14px', color: '#EEFF00', fontSize: 13, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' },
-  body:            { padding: '32px 28px', maxWidth: 1100, margin: '0 auto' },
+  body:            { padding: '32px 28px', maxWidth: 1300, margin: '0 auto' },
   title:           { color: '#fff', fontSize: 26, fontWeight: 800, margin: 0 },
   createBtn:       { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
   createForm:      { background: '#162840', borderRadius: 14, padding: '20px 24px', marginBottom: 24 },
@@ -348,24 +346,23 @@ const s = {
   tableWrap:       { background: '#162840', borderRadius: 14, overflow: 'hidden', marginTop: 24 },
   table:           { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
   th:              { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '14px 20px', textAlign: 'left', borderBottom: '1px solid #1A3A5C' },
-  thEmail:         { width: 240 },
-  thName:          { width: 200 },
-  thRole:          { width: 170 },
-  thClient:        { width: 200 },
-  thStatus:        { width: 150 },
+  thEmail:         { width: '20%' },
+  thName:          { width: '18%' },
+  thRole:          { width: '15%' },
+  thClient:        { width: '15%' },
+  thStatus:        { width: '10%' },
+  thAction:        { width: '22%', textAlign: 'right' },
   tr:              { borderBottom: '1px solid #1A3A5C' },
-  td:              { padding: '14px 20px', verticalAlign: 'middle' },
-  tdRole:          { width: 170 },
-  tdClient:        { width: 200 },
-  tdStatus:        { width: 150, paddingRight: 12 },
-  tdAction:        { padding: '14px 20px', verticalAlign: 'middle', textAlign: 'right', minWidth: 300 },
-  email:           { color: '#fff', fontSize: 14, fontWeight: 600 },
-  noEmail:         { color: '#8A9BAD', fontSize: 13, fontStyle: 'italic', fontWeight: 400 },
-  select:          { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '8px 12px', color: '#fff', fontSize: 14, width: '100%' },
-  badge:           { display: 'inline-block', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700 },
-  saveBtn:         { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
-  disableBtn:      { borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
-  deleteBtn:       { background: '#F4433622', color: '#F44336', border: '1px solid #F44336', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
-  deleteConfirmBtn:{ background: '#F44336', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
-  cancelBtn:       { background: 'transparent', color: '#8A9BAD', border: '1px solid #8A9BAD', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' },
+  td:              { padding: '14px 15px', verticalAlign: 'middle' },
+  tdStatus:        { padding: '14px 10px', verticalAlign: 'middle' },
+  tdAction:        { padding: '14px 20px', verticalAlign: 'middle', textAlign: 'right', whiteSpace: 'nowrap' },
+  email:           { color: '#fff', fontSize: 13, fontWeight: 600, wordBreak: 'break-all' },
+  noEmail:         { color: '#8A9BAD', fontSize: 12, fontStyle: 'italic' },
+  select:          { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '8px 8px', color: '#fff', fontSize: 13, width: '100%' },
+  badge:           { display: 'inline-block', borderRadius: 20, padding: '2px 8px', fontSize: 11, fontWeight: 700 },
+  saveBtn:         { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 6, padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
+  disableBtn:      { borderRadius: 6, padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
+  deleteBtn:       { background: '#F4433622', color: '#F44336', border: '1px solid #F44336', borderRadius: 6, padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
+  deleteConfirmBtn:{ background: '#F44336', color: '#fff', border: 'none', borderRadius: 6, padding: '8px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
+  cancelBtn:       { background: 'transparent', color: '#8A9BAD', border: '1px solid #8A9BAD', borderRadius: 6, padding: '8px 12px', fontSize: 12, cursor: 'pointer' },
 }
