@@ -283,7 +283,7 @@ export default function UsersPage() {
                       </td>
                       <td style={s.tdAction}>
                         {pending ? (
-                          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
                             <span style={{ color: '#F44336', fontSize: 13, fontWeight: 600 }}>Delete?</span>
                             <button style={s.deleteConfirmBtn} onClick={() => deleteUser(user.id)} disabled={busy}>
                               {busy ? '…' : 'Yes, Delete'}
@@ -291,7 +291,7 @@ export default function UsersPage() {
                             <button style={s.cancelBtn} onClick={() => setConfirmDelete(null)}>Cancel</button>
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                             <button
                               style={{ ...s.saveBtn, opacity: dirty ? 1 : 0.3, cursor: dirty ? 'pointer' : 'default' }}
                               disabled={!dirty || saving === user.id}
@@ -345,27 +345,27 @@ const s = {
   error:           { color: '#F44336', fontSize: 13, margin: '0 0 12px' },
   centred:         { display: 'flex', justifyContent: 'center', paddingTop: 60 },
   empty:           { color: '#8A9BAD', textAlign: 'center', paddingTop: 60 },
-  tableWrap:       { background: '#162840', borderRadius: 16, overflowX: 'auto', marginTop: 28, padding: 6 },
-  table:           { width: '100%', minWidth: 1400, borderCollapse: 'separate', borderSpacing: '0 10px', tableLayout: 'fixed' },
+  tableWrap:       { background: '#162840', borderRadius: 16, overflow: 'hidden', marginTop: 28, padding: 6 },
+  table:           { width: '100%', borderCollapse: 'separate', borderSpacing: '0 10px', tableLayout: 'fixed' },
   th:              { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '14px 22px 10px', textAlign: 'left', borderBottom: '1px solid #1A3A5C' },
-  thEmail:         { width: 260 },
-  thName:          { width: 220 },
-  thRole:          { width: 220 },
-  thClient:        { width: 260 },
+  thEmail:         { width: 230 },
+  thName:          { width: 200 },
+  thRole:          { width: 190 },
+  thClient:        { width: 210 },
   thStatus:        { width: 160 },
   tr:              { borderRadius: 12, background: '#15263F' },
   td:              { padding: '18px 22px', verticalAlign: 'middle' },
-  tdRole:          { width: 220 },
-  tdClient:        { width: 260 },
+  tdRole:          { width: 190 },
+  tdClient:        { width: 210 },
   tdStatus:        { width: 160, paddingRight: 12 },
-  tdAction:        { padding: '18px 22px', verticalAlign: 'middle', textAlign: 'right', minWidth: 460 },
+  tdAction:        { padding: '18px 22px', verticalAlign: 'middle', textAlign: 'right', minWidth: 0 },
   email:           { color: '#fff', fontSize: 14, fontWeight: 600 },
   noEmail:         { color: '#8A9BAD', fontSize: 13, fontStyle: 'italic', fontWeight: 400 },
   select:          { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 14, width: '100%', lineHeight: 1.4 },
   badge:           { display: 'inline-block', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700 },
-  saveBtn:         { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
-  disableBtn:      { borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
-  deleteBtn:       { background: '#F4433622', color: '#F44336', border: '1px solid #F44336', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
-  deleteConfirmBtn:{ background: '#F44336', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
-  cancelBtn:       { background: 'transparent', color: '#8A9BAD', border: '1px solid #8A9BAD', borderRadius: 10, padding: '9px 18px', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' },
+  saveBtn:         { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+  disableBtn:      { borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+  deleteBtn:       { background: '#F4433622', color: '#F44336', border: '1px solid #F44336', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+  deleteConfirmBtn:{ background: '#F44336', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+  cancelBtn:       { background: 'transparent', color: '#8A9BAD', border: '1px solid #8A9BAD', borderRadius: 10, padding: '8px 14px', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' },
 }
