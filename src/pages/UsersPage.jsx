@@ -354,7 +354,7 @@ const s = {
   thAction:        { width: '22%', textAlign: 'right' },
   tr:              { borderBottom: '1px solid #1A3A5C' },
   td:              { padding: '14px 15px', verticalAlign: 'middle' },
-  tdStatus:        { padding: '14px 10px', verticalAlign: 'middle' },
+  tdStatus:        { padding: '14px 10px', verticalAlign: 'center' },
   tdAction:        { padding: '14px 20px', verticalAlign: 'middle', textAlign: 'right', whiteSpace: 'nowrap' },
   email:           { color: '#fff', fontSize: 13, fontWeight: 600, wordBreak: 'break-all' },
   noEmail:         { color: '#8A9BAD', fontSize: 12, fontStyle: 'italic' },
