@@ -712,7 +712,7 @@ export default function ProjectsPage({ role }) {
               {
                 icon: '📋',
                 title: 'Projects Dashboard',
-                desc: 'Your home screen shows all active projects at a glance. Use the Active / Completed / Archived tabs to filter, or click View All to open the full searchable project list. Click any project row to dive into its detail.'
+                desc: 'Your home screen shows all active projects at a glance. Use the Active / Completed / Archived tabs to filter, or click Manage to open the full searchable project list. Click any project row to dive into its detail.'
               },
               {
                 icon: '🚪',
