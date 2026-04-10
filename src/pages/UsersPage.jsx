@@ -230,8 +230,8 @@ export default function UsersPage() {
                 <tr>
                   <th style={s.th}>Email</th>
                   <th style={s.th}>Full Name</th>
-                  <th style={s.th}>Role</th>
-                  <th style={s.th}>Client</th>
+                  <th style={{ ...s.th, ...s.thRole }}>Role</th>
+                  <th style={{ ...s.th, ...s.thClient }}>Client</th>
                   <th style={s.th}>Status</th>
                   <th style={s.th}></th>
                 </tr>
@@ -256,7 +256,7 @@ export default function UsersPage() {
                           onChange={e => setField(user.id, 'full_name', e.target.value)}
                         />
                       </td>
-                      <td style={s.td}>
+                      <td style={{ ...s.td, ...s.tdRole }}>
                         <select style={s.select} value={edit.role || 'client'} onChange={e => setField(user.id, 'role', e.target.value)}>
                           <option value="admin">Admin</option>
                           <option value="user">User</option>
@@ -265,7 +265,7 @@ export default function UsersPage() {
                           <option value="client">Client</option>
                         </select>
                       </td>
-                      <td style={s.td}>
+                      <td style={{ ...s.td, ...s.tdClient }}>
                         <select
                           style={s.select}
                           value={edit.client_id || ''}
@@ -346,10 +346,14 @@ const s = {
   centred:         { display: 'flex', justifyContent: 'center', paddingTop: 60 },
   empty:           { color: '#8A9BAD', textAlign: 'center', paddingTop: 60 },
   tableWrap:       { background: '#162840', borderRadius: 14, overflow: 'hidden', marginTop: 24 },
-  table:           { width: '100%', borderCollapse: 'collapse' },
+  table:           { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
   th:              { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '14px 20px', textAlign: 'left', borderBottom: '1px solid #1A3A5C' },
+  thRole:          { width: 150 },
+  thClient:        { width: 170 },
   tr:              { borderBottom: '1px solid #1A3A5C' },
   td:              { padding: '14px 20px', verticalAlign: 'middle' },
+  tdRole:          { width: 150 },
+  tdClient:        { width: 170 },
   tdAction:        { padding: '14px 20px', verticalAlign: 'middle', textAlign: 'right', minWidth: 260 },
   email:           { color: '#fff', fontSize: 14, fontWeight: 600 },
   noEmail:         { color: '#8A9BAD', fontSize: 13, fontStyle: 'italic', fontWeight: 400 },
