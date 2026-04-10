@@ -154,7 +154,6 @@ export default function ProjectDetailPage() {
 
   const passCount      = inspections.filter(i => i.inspection_passed === 'Pass').length
   const failCount      = inspections.filter(i => i.inspection_passed === 'Fail').length
-  const actionedCount  = inspections.filter(i => i.remedial_actioned).length
   const hasRepairJobs  = inspections.some(i =>
     i.inspection_passed === 'Fail' &&
     (i.recommended_action?.toLowerCase().includes('repair') || i.remedial_works_completed)
@@ -320,7 +319,6 @@ export default function ProjectDetailPage() {
           <Stat label="Pass"     value={passCount}          color={PASS_COLOR} />
           <Stat label="Fail"     value={failCount}          color={FAIL_COLOR} />
           {passRate !== null && <Stat label="Pass Rate" value={`${passRate}%`} color={passRate >= 80 ? PASS_COLOR : passRate >= 50 ? '#FF9800' : FAIL_COLOR} />}
-          {failCount > 0 && <Stat label="Actioned" value={`${actionedCount}/${failCount}`} color={actionedCount === failCount ? PASS_COLOR : '#FF9800'} />}
           {lastInspected && (
             <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
               <div style={{ color: GREY, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Last Inspected</div>

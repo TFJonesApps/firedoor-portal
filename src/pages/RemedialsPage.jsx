@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { KNOWN_ENGINEERS } from '../lib/engineers'
 
 export default function RemedialsPage() {
   const navigate = useNavigate()
@@ -10,7 +9,6 @@ export default function RemedialsPage() {
   // URL-driven filter state
   const tab     = searchParams.get('status') || 'pending'
   const clientF = searchParams.get('client') || ''
-  const joinerF = searchParams.get('joiner') || ''
   const q       = searchParams.get('q') || ''
 
   const updateParam = (key, value) => {
@@ -21,21 +19,18 @@ export default function RemedialsPage() {
 
   // Data
   const [remedials, setRemedials] = useState([])
-  const [joiners, setJoiners]     = useState([])
   const [loading, setLoading]     = useState(true)
-
-  // Assign modal
-  const [assignTarget, setAssignTarget]     = useState(null) // remedial row
-  const [assignJoinerId, setAssignJoinerId] = useState('')
-  const [assigning, setAssigning]           = useState(false)
 
   // Close modal
   const [closeTarget, setCloseTarget]       = useState(null) // remedial row
   const [closeReason, setCloseReason]       = useState('')
   const [closing, setClosing]               = useState(false)
 
+  // View detail
+  const [viewTarget, setViewTarget]         = useState(null) // remedial row
+
   useEffect(() => {
-    Promise.all([fetchRemedials(), fetchJoiners()])
+    fetchRemedials()
 
     const sub = supabase.channel('remedials-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'remedials' }, () => fetchRemedials())
@@ -55,44 +50,14 @@ export default function RemedialsPage() {
     setLoading(false)
   }
 
-  async function fetchJoiners() {
-    const { data } = await supabase
-      .from('user_profiles')
-      .select('id, email')
-      .eq('role', 'joiner')
-      .order('email')
-    setJoiners(data || [])
-  }
-
   // Body-scroll lock for modals
   useEffect(() => {
-    if (assignTarget || closeTarget) {
+    if (closeTarget || viewTarget) {
       const prev = document.body.style.overflow
       document.body.style.overflow = 'hidden'
       return () => { document.body.style.overflow = prev }
     }
-  }, [assignTarget, closeTarget])
-
-  async function handleAssign(e) {
-    e.preventDefault()
-    if (!assignTarget || !assignJoinerId) return
-    setAssigning(true)
-    try {
-      const joiner = joiners.find(j => j.id === assignJoinerId)
-      const joinerName = KNOWN_ENGINEERS[joiner?.email?.toLowerCase()] || joiner?.email || ''
-      const { error } = await supabase.from('remedials').update({
-        joiner_id: assignJoinerId,
-        joiner_name: joinerName,
-        status: assignTarget.status === 'pending' ? 'in_progress' : assignTarget.status,
-      }).eq('id', assignTarget.id)
-      if (error) throw error
-      setAssignTarget(null)
-      setAssignJoinerId('')
-    } catch (err) {
-      alert('Failed to assign: ' + err.message)
-    }
-    setAssigning(false)
-  }
+  }, [closeTarget, viewTarget])
 
   async function handleClose(e) {
     e.preventDefault()
@@ -133,14 +98,6 @@ export default function RemedialsPage() {
     return Array.from(set).sort()
   }, [remedials])
 
-  // Unique joiner names for filter
-  const joinerNames = useMemo(() => {
-    const set = new Set()
-    for (const r of remedials) {
-      if (r.joiner_name) set.add(r.joiner_name)
-    }
-    return Array.from(set).sort()
-  }, [remedials])
 
   // Stats
   const stats = useMemo(() => {
@@ -154,7 +111,6 @@ export default function RemedialsPage() {
     return remedials.filter(r => {
       if (r.status !== tab) return false
       if (clientF && r.projects?.client_name !== clientF) return false
-      if (joinerF && r.joiner_name !== joinerF) return false
       if (q) {
         const query = q.toLowerCase()
         const fields = [
@@ -163,14 +119,13 @@ export default function RemedialsPage() {
           r.projects?.name,
           r.projects?.client_name,
           r.recommended_action,
-          r.joiner_name,
           r.door_asset_id,
         ]
         if (!fields.some(f => f?.toLowerCase().includes(query))) return false
       }
       return true
     })
-  }, [remedials, tab, clientF, joinerF, q])
+  }, [remedials, tab, clientF, q])
 
   const STATUS_COLORS = {
     pending:     { bg: '#F4433622', text: '#F44336' },
@@ -223,10 +178,6 @@ export default function RemedialsPage() {
           <option value="">All Clients</option>
           {clients.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-        <select style={{ ...s.input, minWidth: 180 }} value={joinerF} onChange={e => updateParam('joiner', e.target.value)}>
-          <option value="">All Joiners</option>
-          {joinerNames.map(n => <option key={n} value={n}>{n}</option>)}
-        </select>
       </div>
 
       {/* Table */}
@@ -238,7 +189,7 @@ export default function RemedialsPage() {
         ) : (
           <div style={s.tableWrap}>
             <table style={s.table}>
-              <thead><tr>{['Door Location', 'Asset ID', 'Project', 'Client', 'Action Required', 'Joiner', 'Status', 'Created', ''].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
+              <thead><tr>{['Door Location', 'Asset ID', 'Project', 'Client', 'Action Required', 'Status', 'Created', ''].map(h => <th key={h} style={s.th}>{h}</th>)}</tr></thead>
               <tbody>
                 {filtered.map(r => {
                   const sc = STATUS_COLORS[r.status] || STATUS_COLORS.pending
@@ -268,7 +219,6 @@ export default function RemedialsPage() {
                           <div style={{ color: '#FF9800', fontSize: 11, marginTop: 3, lineHeight: '1.4' }}>{r.recommended_repair_actions}</div>
                         )}
                       </td>
-                      <td style={s.td}><span style={{ color: r.joiner_name ? '#fff' : '#4A6580', fontWeight: 500 }}>{r.joiner_name || 'Unassigned'}</span></td>
                       <td style={s.td}>
                         <span style={{ background: sc.bg, color: sc.text, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, textTransform: 'uppercase' }}>
                           {STATUS_LABELS[r.status]}
@@ -277,23 +227,15 @@ export default function RemedialsPage() {
                       <td style={s.td}><span style={{ color: '#94A3B8' }}>{new Date(r.created_at).toLocaleDateString('en-GB')}</span></td>
                       <td style={s.td}>
                         <div style={{ display: 'flex', gap: 6 }}>
+                          <button style={s.actionBtn} onClick={() => setViewTarget(r)}>View</button>
                           {(r.status === 'pending' || r.status === 'in_progress') && (
-                            <>
-                              <button style={s.actionBtn} onClick={() => { setAssignTarget(r); setAssignJoinerId(r.joiner_id || '') }}>
-                                {r.joiner_id ? 'Reassign' : 'Assign'}
-                              </button>
-                              <button style={{ ...s.actionBtn, borderColor: '#64748B', color: '#64748B' }} onClick={() => { setCloseTarget(r); setCloseReason('') }}>
-                                Close
-                              </button>
-                            </>
+                            <button style={{ ...s.actionBtn, borderColor: '#64748B', color: '#64748B' }} onClick={() => { setCloseTarget(r); setCloseReason('') }}>
+                              Close
+                            </button>
                           )}
                           {r.status === 'closed' && (
                             <button style={s.actionBtn} onClick={() => reopenRemedial(r)}>Reopen</button>
                           )}
-                          <button
-                            style={{ ...s.actionBtn, borderColor: '#4A6580', color: '#4A6580' }}
-                            onClick={() => r.project_id && navigate(`/project/${r.project_id}`)}
-                          >View</button>
                         </div>
                       </td>
                     </tr>
@@ -306,38 +248,48 @@ export default function RemedialsPage() {
         <div style={s.count}>{filtered.length} remedial{filtered.length !== 1 ? 's' : ''}</div>
       </div>
 
-      {/* Assign Joiner modal */}
-      {assignTarget && (
-        <div style={s.overlay} onClick={() => setAssignTarget(null)}>
-          <form onSubmit={handleAssign} style={s.modal} onClick={e => e.stopPropagation()}>
+      {/* View Remedial detail modal */}
+      {viewTarget && (
+        <div style={s.overlay} onClick={() => setViewTarget(null)}>
+          <div style={{ ...s.modal, maxWidth: 560 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Assign Joiner</h2>
-              <button type="button" onClick={() => setAssignTarget(null)} style={{ background: 'none', border: 'none', color: '#8A9BAD', fontSize: 22, cursor: 'pointer', padding: '0 4px' }}>&times;</button>
+              <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Remedial Detail</h2>
+              <button onClick={() => setViewTarget(null)} style={{ background: 'none', border: 'none', color: '#8A9BAD', fontSize: 22, cursor: 'pointer', padding: '0 4px' }}>&times;</button>
             </div>
-            <p style={{ color: '#8A9BAD', fontSize: 13, margin: '0 0 16px' }}>
-              Assign a joiner to repair <span style={{ color: '#EEFF00', fontWeight: 700 }}>{assignTarget.inspections?.door_location || assignTarget.door_asset_id || 'this door'}</span> at {assignTarget.projects?.name || 'unknown project'}.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-              <label style={s.label}>Recommended Action</label>
-              <div style={{ color: '#F44336', fontSize: 13, fontWeight: 600 }}>{assignTarget.recommended_action || '—'}</div>
-              {assignTarget.recommended_repair_actions && (
-                <div style={{ color: '#CBD5E1', fontSize: 12, marginTop: 4 }}>{assignTarget.recommended_repair_actions}</div>
-              )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {[
+                ['Door Location', viewTarget.inspections?.door_location],
+                ['Asset ID', viewTarget.door_asset_id || viewTarget.inspections?.door_asset_id],
+                ['Fire Rating', viewTarget.inspections?.fire_rating],
+                ['Project', viewTarget.projects?.name],
+                ['Client', viewTarget.projects?.client_name],
+                ['Address', [viewTarget.projects?.address, viewTarget.projects?.postcode].filter(Boolean).join(', ')],
+                ['Inspector', viewTarget.inspections?.engineer_name],
+                ['Inspection Result', viewTarget.inspections?.inspection_passed],
+                ['Recommended Action', viewTarget.recommended_action],
+                ['Repair Details', viewTarget.recommended_repair_actions],
+                ['Status', STATUS_LABELS[viewTarget.status]],
+                ['Created', new Date(viewTarget.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })],
+                viewTarget.closed_reason && ['Close Reason', viewTarget.closed_reason],
+                viewTarget.closed_at && ['Closed', new Date(viewTarget.closed_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })],
+              ].filter(Boolean).filter(([, v]) => v).map(([label, value]) => (
+                <div key={label} style={{ display: 'flex', gap: 12 }}>
+                  <span style={{ color: '#8A9BAD', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', minWidth: 130, flexShrink: 0 }}>{label}</span>
+                  <span style={{ color: label === 'Recommended Action' || label === 'Repair Details' ? '#FF9800' : '#fff', fontSize: 13, fontWeight: label === 'Repair Details' ? 600 : 400 }}>{value}</span>
+                </div>
+              ))}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={s.label}>Assign to Joiner *</label>
-              <select style={s.input} required value={assignJoinerId} onChange={e => setAssignJoinerId(e.target.value)}>
-                <option value="">— Select Joiner —</option>
-                {joiners.map(j => <option key={j.id} value={j.id}>{KNOWN_ENGINEERS[j.email?.toLowerCase()] || j.email}</option>)}
-              </select>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
+              <button
+                style={{ background: 'transparent', border: '1px solid #EEFF00', borderRadius: 8, padding: '10px 20px', color: '#EEFF00', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                onClick={() => { setViewTarget(null); viewTarget.project_id && navigate(`/project/${viewTarget.project_id}`) }}
+              >Go to Project</button>
+              <button
+                style={{ background: 'transparent', border: '1px solid #243F5C', borderRadius: 8, padding: '10px 20px', color: '#8A9BAD', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                onClick={() => setViewTarget(null)}
+              >Close</button>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-              <button type="button" onClick={() => setAssignTarget(null)} style={{ background: 'transparent', border: '1px solid #243F5C', borderRadius: 8, padding: '10px 20px', color: '#8A9BAD', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginRight: 10 }}>Cancel</button>
-              <button style={s.save} type="submit" disabled={assigning}>
-                {assigning ? 'Assigning…' : 'Assign Joiner'}
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
       )}
 
