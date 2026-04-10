@@ -281,7 +281,7 @@ export default function UsersPage() {
                       </td>
                       <td style={s.tdAction}>
                         {pending ? (
-                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-start', alignItems: 'center' }}>
                             <span style={{ color: '#F44336', fontSize: 12, fontWeight: 600 }}>Delete?</span>
                             <button style={s.deleteConfirmBtn} onClick={() => deleteUser(user.id)} disabled={busy}>
                               {busy ? '…' : 'Yes'}
@@ -289,7 +289,7 @@ export default function UsersPage() {
                             <button style={s.cancelBtn} onClick={() => setConfirmDelete(null)}>No</button>
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-start' }}>
                             <button
                               style={{ ...s.saveBtn, opacity: dirty ? 1 : 0.3, cursor: dirty ? 'pointer' : 'default' }}
                               disabled={!dirty || saving === user.id}
@@ -351,11 +351,11 @@ const s = {
   thRole:          { width: '13%' },
   thClient:        { width: '15%' },
   thStatus:        { width: '10%', textAlign: 'center' },
-  thAction:        { width: '24%', textAlign: 'center' },
+  thAction:        { width: '24%', textAlign: 'left', paddingLeft: 15 }, // Adjusted for alignment
   tr:              { borderBottom: '1px solid #1A3A5C' },
   td:              { padding: '14px 15px', verticalAlign: 'middle' },
   tdStatus:        { padding: '14px 10px', verticalAlign: 'middle', textAlign: 'center' },
-  tdAction:        { padding: '14px 20px', verticalAlign: 'middle', textAlign: 'center', whiteSpace: 'nowrap' },
+  tdAction:        { padding: '14px 15px', verticalAlign: 'middle', textAlign: 'left', whiteSpace: 'nowrap' }, // Adjusted to match header
   email:           { color: '#fff', fontSize: 13, fontWeight: 600, wordBreak: 'break-all' },
   noEmail:         { color: '#8A9BAD', fontSize: 12, fontStyle: 'italic' },
   select:          { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '8px 8px', color: '#fff', fontSize: 13, width: '100%' },
