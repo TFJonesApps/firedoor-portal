@@ -557,7 +557,8 @@ function drawSummaryRow(doc, ins, y, rowIndex) {
 export async function generateRemedialEvidence(remedial) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null)
-  const totalPages = 1 + (((remedial.before_photo_urls?.length || 0) + (remedial.after_photo_urls?.length || 0)) > 4 ? 1 : 0)
+  const totalPhotos = (remedial.before_photo_urls?.length || 0) + (remedial.after_photo_urls?.length || 0)
+  const totalPages = totalPhotos > 6 ? 2 : 1
   await remedialEvidencePage(doc, logo, remedial, 1, totalPages)
   const location = remedial.inspections?.door_location || remedial.door_asset_id || 'remedial'
   doc.save(`Remedial_Evidence_${location.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`)
@@ -566,134 +567,171 @@ export async function generateRemedialEvidence(remedial) {
 // ─── Remedial Evidence Page (reusable for embedding in history) ──────────────
 async function remedialEvidencePage(doc, logo, rem, startPage, totalPages) {
   let pageNum = startPage
+  const FOOTER_H = 14
+  const PHOTO_GAP = 4
+  const HALF_W = (CW - PHOTO_GAP) / 2
+
+  function newPage(subtitle) {
+    drawFooter(doc, pageNum, totalPages)
+    doc.addPage(); pageNum++
+    doc.setFillColor(...WHITE); doc.rect(0, 0, W, H, 'F')
+    drawPageHeader(doc, logo, 'REMEDIAL EVIDENCE REPORT', subtitle || '')
+    return 34
+  }
+
   doc.setFillColor(...WHITE); doc.rect(0, 0, W, H, 'F')
   drawPageHeader(doc, logo, 'REMEDIAL EVIDENCE REPORT', new Date(rem.completed_at || rem.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }))
 
   let y = 34
 
-  // Door info table
-  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY); doc.text('Door Information', ML, y)
-  y += 4; doc.setFillColor(...MGREY); doc.rect(ML, y, CW, 0.4, 'F'); y += 0.4
+  // ── Combined info table: door info + action + completion in one block ──
+  const allRows = [
+    { label: 'Location', value: rem.inspections?.door_location, section: 'info' },
+    { label: 'Asset ID', value: rem.door_asset_id || rem.inspections?.door_asset_id, section: 'info' },
+    { label: 'Fire Rating', value: rem.inspections?.fire_rating, section: 'info' },
+    { label: 'Project', value: rem.projects?.name, section: 'info' },
+    { label: 'Client', value: rem.projects?.client_name, section: 'info' },
+    { label: 'Address', value: [rem.projects?.address, rem.projects?.postcode].filter(Boolean).join(', '), section: 'info' },
+    { label: 'Action Required', value: rem.recommended_action, section: 'action' },
+    { label: 'Repair Details', value: rem.recommended_repair_actions, section: 'action' },
+    { label: 'Completed By', value: rem.joiner_name, section: 'completion' },
+    { label: 'Completed', value: rem.completed_at ? new Date(rem.completed_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null, section: 'completion' },
+    { label: 'Notes', value: rem.completion_notes, section: 'completion' },
+  ].filter(r => r.value)
 
-  const infoRows = [
-    ['Location', rem.inspections?.door_location || '—'],
-    ['Asset ID', rem.door_asset_id || rem.inspections?.door_asset_id || '—'],
-    ['Fire Rating', rem.inspections?.fire_rating || '—'],
-    ['Project', rem.projects?.name || '—'],
-    ['Client', rem.projects?.client_name || '—'],
-    ['Address', [rem.projects?.address, rem.projects?.postcode].filter(Boolean).join(', ') || '—'],
-  ].filter(([, v]) => v && v !== '—')
+  // Section headers
+  const sectionHeaders = { info: 'DOOR & PROJECT', action: 'ACTION REQUIRED', completion: 'REPAIR COMPLETED' }
+  const sectionColors = {
+    info: { header: NAVY, headerText: YELLOW, even: LGREY, odd: WHITE, text: DARK },
+    action: { header: ORANGE, headerText: WHITE, even: ORANGE_LIGHT, odd: WHITE, text: RED },
+    completion: { header: GREEN, headerText: WHITE, even: LGREY, odd: WHITE, text: DARK },
+  }
+  let lastSection = ''
+  let rowInSection = 0
 
-  infoRows.forEach(([label, value], i) => {
-    const rh = 8.5; const ry = y + i * rh
-    doc.setFillColor(...(i % 2 === 0 ? LGREY : WHITE)); doc.rect(ML, ry, CW, rh, 'F')
-    doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text(label, ML + 3, ry + 5.8)
-    doc.setFont('helvetica', 'normal'); doc.setTextColor(...DARK)
-    const val = doc.splitTextToSize(value, CW * 0.55)[0]
-    doc.text(val, ML + CW - 3, ry + 5.8, { align: 'right' })
-  })
-  y += infoRows.length * 8.5 + 6
-
-  // Action required section (orange themed)
-  doc.setFillColor(...ORANGE); doc.rect(ML, y, CW, 6.5, 'F')
-  doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...WHITE); doc.text('ACTION REQUIRED', ML + 2.5, y + 4.5)
-  const severityLabel = (rem.recommended_action || '').toLowerCase().includes('replace') ? 'REPLACE' : 'REPAIR'
-  const badgeW = 22; const badgeX = ML + CW - badgeW - 2
-  doc.setFillColor(...RED); doc.roundedRect(badgeX, y + 1, badgeW, 4.5, 1, 1, 'F')
-  doc.setFontSize(5.5); doc.setTextColor(...WHITE); doc.text(severityLabel, badgeX + badgeW / 2, y + 4.2, { align: 'center' })
-  y += 6.5
-
-  const actionRows = [
-    ['Recommended Action', rem.recommended_action],
-    ['Repair Details', rem.recommended_repair_actions],
-  ].filter(([, v]) => v)
-  actionRows.forEach(([label, value], i) => {
-    const valLines = doc.splitTextToSize(String(value), CW * 0.55)
-    const rh = Math.max(8.5, valLines.length * 4.5 + 4)
-    doc.setFillColor(...(i % 2 === 0 ? ORANGE_LIGHT : WHITE)); doc.rect(ML, y, CW, rh, 'F')
-    doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text(label, ML + 3, y + 5.8)
-    doc.setFont('helvetica', 'bold'); doc.setTextColor(...RED); doc.text(valLines, ML + CW - 3, y + 5.8, { align: 'right' })
-    y += rh
-  })
-  doc.setDrawColor(...ORANGE); doc.setLineWidth(0.6)
-  doc.rect(ML, y - actionRows.reduce((s, [, v], i) => { const vl = doc.splitTextToSize(String(v), CW * 0.55); return s + Math.max(8.5, vl.length * 4.5 + 4) }, 0) - 6.5, CW, actionRows.reduce((s, [, v]) => { const vl = doc.splitTextToSize(String(v), CW * 0.55); return s + Math.max(8.5, vl.length * 4.5 + 4) }, 0) + 6.5)
-  doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.2)
-  y += 6
-
-  // Completion info section
-  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY); doc.text('Completion Details', ML, y)
-  y += 4; doc.setFillColor(...MGREY); doc.rect(ML, y, CW, 0.4, 'F'); y += 0.4
-
-  const completionRows = [
-    ['Completed By', rem.joiner_name || '—'],
-    ['Completed', rem.completed_at ? new Date(rem.completed_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'],
-    ['Notes', rem.completion_notes || '—'],
-  ].filter(([, v]) => v && v !== '—')
-
-  completionRows.forEach(([label, value], i) => {
-    const valLines = doc.splitTextToSize(String(value), CW * 0.6)
-    const rh = Math.max(8.5, valLines.length * 4.5 + 4)
-    doc.setFillColor(...(i % 2 === 0 ? LGREY : WHITE)); doc.rect(ML, y, CW, rh, 'F')
-    doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text(label, ML + 3, y + 5.8)
-    doc.setFont('helvetica', 'normal'); doc.setTextColor(...DARK); doc.text(valLines, ML + CW - 3, y + 5.8, { align: 'right' })
-    y += rh
-  })
-  y += 6
-
-  // Photo sections
-  const FOOTER_H = 14
-  const PHOTO_GAP = 4
-  const PHOTO_COL_W = (CW - PHOTO_GAP) / 2
-
-  async function drawPhotoGrid(photos, title) {
-    if (!photos || photos.length === 0) return
-
-    // Check if we need a new page
-    if (y + 60 > H - FOOTER_H) {
-      drawFooter(doc, pageNum, totalPages)
-      doc.addPage(); pageNum++
-      doc.setFillColor(...WHITE); doc.rect(0, 0, W, H, 'F')
-      drawPageHeader(doc, logo, 'REMEDIAL EVIDENCE REPORT', 'PHOTOGRAPHS')
-      y = 34
+  allRows.forEach((row) => {
+    const sc = sectionColors[row.section]
+    // Draw section header when section changes
+    if (row.section !== lastSection) {
+      if (lastSection) y += 2
+      doc.setFillColor(...sc.header); doc.rect(ML, y, CW, 6.5, 'F')
+      doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...sc.headerText)
+      doc.text(sectionHeaders[row.section], ML + 2.5, y + 4.5)
+      // Severity badge on action header
+      if (row.section === 'action') {
+        const sLabel = (rem.recommended_action || '').toLowerCase().includes('replace') ? 'REPLACE' : 'REPAIR'
+        const bw = 22; const bx = ML + CW - bw - 2
+        doc.setFillColor(...RED); doc.roundedRect(bx, y + 1, bw, 4.5, 1, 1, 'F')
+        doc.setFontSize(5.5); doc.setTextColor(...WHITE); doc.text(sLabel, bx + bw / 2, y + 4.2, { align: 'center' })
+      }
+      y += 6.5
+      lastSection = row.section
+      rowInSection = 0
     }
 
-    // Section header
-    doc.setFillColor(...LGREY); doc.rect(ML, y, CW, 7, 'F')
-    doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY); doc.text(title, ML + 5.5, y + 4.8)
-    y += 10
+    const valLines = doc.splitTextToSize(String(row.value), CW * 0.55)
+    const rh = Math.max(7, valLines.length * 4.5 + 3)
+    doc.setFillColor(...(rowInSection % 2 === 0 ? sc.even : sc.odd)); doc.rect(ML, y, CW, rh, 'F')
+    doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text(row.label, ML + 3, y + 5)
+    doc.setFont('helvetica', 'bold'); doc.setTextColor(...sc.text); doc.text(valLines, ML + CW - 3, y + 5, { align: 'right' })
+    y += rh
+    rowInSection++
+  })
+  y += 8
 
-    const numRows = Math.ceil(photos.length / 2)
-    const available = H - FOOTER_H - y
-    const idealCellH = (available - (numRows - 1) * 3 - numRows * 5) / numRows
-    const CELL_H = Math.max(25, Math.min(55, idealCellH))
-    const ROW_H = CELL_H + 5 + 3
+  // ── Photo sections: before on left, after on right (side by side) ──
+  const beforePhotos = (rem.before_photo_urls || []).slice(0, 4)
+  const afterPhotos = (rem.after_photo_urls || []).slice(0, 4)
+  const hasPhotos = beforePhotos.length > 0 || afterPhotos.length > 0
 
-    for (let i = 0; i < Math.min(photos.length, 4); i++) {
-      const col = i % 2
-      const px = ML + col * (PHOTO_COL_W + PHOTO_GAP)
-      doc.setFillColor(...LGREY); doc.roundedRect(px, y, PHOTO_COL_W, CELL_H + 5, 1, 1, 'F')
-      doc.setFontSize(6); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text(`Photo ${i + 1}`, px + 2, y + 4)
-      try {
-        const img = await loadImage(photos[i])
-        const imgEl = await getImageDimensions(img)
-        const maxW = PHOTO_COL_W - 2, maxH = CELL_H - 2
-        const ratio = imgEl.width / imgEl.height
-        let dw = maxW, dh = dw / ratio
-        if (dh > maxH) { dh = maxH; dw = dh * ratio }
-        const ox = px + (PHOTO_COL_W - dw) / 2
-        const oy = y + 5 + (CELL_H - dh) / 2
-        doc.addImage(img, 'JPEG', ox, oy, dw, dh)
-      } catch (_) {}
-      if (col === 1 || i === photos.length - 1) y += ROW_H
+  if (hasPhotos) {
+    const spaceLeft = H - FOOTER_H - y
+    // If not enough space for photos (~80mm minimum), start new page
+    if (spaceLeft < 80) { y = newPage('PHOTOGRAPHIC EVIDENCE') }
+
+    // Side-by-side layout: before column left, after column right
+    const colW = HALF_W
+    const photoAreaH = H - FOOTER_H - y - 4
+
+    async function drawPhotoColumn(photos, title, startX) {
+      let py = y
+      // Column header
+      doc.setFillColor(...LGREY); doc.rect(startX, py, colW, 7, 'F')
+      doc.setFontSize(6); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY); doc.text(title, startX + 3, py + 4.8)
+      py += 8
+
+      const count = photos.length
+      const cellGap = 3
+      const labelH = 5
+      const availH = photoAreaH - 8 // minus header
+      const cellH = Math.max(20, Math.min(65, (availH - (count - 1) * cellGap - count * labelH) / count))
+
+      for (let i = 0; i < count; i++) {
+        doc.setFillColor(...LGREY); doc.roundedRect(startX, py, colW, cellH + labelH, 1, 1, 'F')
+        doc.setFontSize(5.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text(`Photo ${i + 1}`, startX + 2, py + 4)
+        try {
+          const img = await loadImage(photos[i])
+          const imgEl = await getImageDimensions(img)
+          const maxW = colW - 4, maxH = cellH - 2
+          const ratio = imgEl.width / imgEl.height
+          let dw = maxW, dh = dw / ratio
+          if (dh > maxH) { dh = maxH; dw = dh * ratio }
+          const ox = startX + (colW - dw) / 2
+          const oy = py + labelH + (cellH - dh) / 2
+          doc.addImage(img, 'JPEG', ox, oy, dw, dh)
+        } catch (_) {}
+        py += cellH + labelH + cellGap
+      }
+      return py
     }
-    y += 2
+
+    // If only one set of photos, use full width
+    if (beforePhotos.length > 0 && afterPhotos.length === 0) {
+      await drawFullWidthPhotos(beforePhotos, 'BEFORE — EVIDENCE OF DAMAGE')
+    } else if (afterPhotos.length > 0 && beforePhotos.length === 0) {
+      await drawFullWidthPhotos(afterPhotos, 'AFTER — COMPLETED REPAIR')
+    } else {
+      // Both sets — side by side
+      const endLeft = beforePhotos.length > 0 ? await drawPhotoColumn(beforePhotos, 'BEFORE', ML) : y
+      const endRight = afterPhotos.length > 0 ? await drawPhotoColumn(afterPhotos, 'AFTER', ML + colW + PHOTO_GAP) : y
+      y = Math.max(endLeft, endRight)
+    }
+
+    async function drawFullWidthPhotos(photos, title) {
+      doc.setFillColor(...LGREY); doc.rect(ML, y, CW, 7, 'F')
+      doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY); doc.text(title, ML + 3, y + 4.8)
+      y += 9
+      const count = photos.length
+      const cols = count === 1 ? 1 : 2
+      const cellW = cols === 1 ? CW : HALF_W
+      const availH = H - FOOTER_H - y - 4
+      const rows = Math.ceil(count / cols)
+      const cellH = Math.max(30, Math.min(80, (availH - (rows - 1) * 3 - rows * 5) / rows))
+
+      for (let i = 0; i < count; i++) {
+        const col = cols === 1 ? 0 : i % 2
+        const px = ML + col * (HALF_W + PHOTO_GAP)
+        const w = cellW
+        doc.setFillColor(...LGREY); doc.roundedRect(px, y, w, cellH + 5, 1, 1, 'F')
+        doc.setFontSize(5.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text(`Photo ${i + 1}`, px + 2, y + 4)
+        try {
+          const img = await loadImage(photos[i])
+          const imgEl = await getImageDimensions(img)
+          const maxW = w - 4, maxH = cellH - 2
+          const ratio = imgEl.width / imgEl.height
+          let dw = maxW, dh = dw / ratio
+          if (dh > maxH) { dh = maxH; dw = dh * ratio }
+          const ox = px + (w - dw) / 2
+          const oy = y + 5 + (cellH - dh) / 2
+          doc.addImage(img, 'JPEG', ox, oy, dw, dh)
+        } catch (_) {}
+        if (cols === 1 || col === 1 || i === count - 1) y += cellH + 5 + 3
+      }
+    }
   }
 
-  await drawPhotoGrid(rem.before_photo_urls, 'BEFORE — EVIDENCE OF DAMAGE')
-  await drawPhotoGrid(rem.after_photo_urls, 'AFTER — COMPLETED REPAIR')
-
   drawFooter(doc, pageNum, totalPages)
-  return pageNum - startPage + 1 // number of pages used
+  return pageNum - startPage + 1
 }
 
 // ─── Image helpers ────────────────────────────────────────────────────────────
