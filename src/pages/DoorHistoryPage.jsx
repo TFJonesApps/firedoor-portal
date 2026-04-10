@@ -100,6 +100,7 @@ async function search(id) {
   const latest = inspections[0]
   const passCount = inspections.filter(i => i.inspection_passed === 'Pass').length
   const passRate  = inspections.length > 0 ? Math.round((passCount / inspections.length) * 100) : 0
+  const isRemediated = latest && latest.inspection_passed !== 'Pass' && remedials.length > 0
 
   return (
     <div style={s.page}>
@@ -188,6 +189,16 @@ async function search(id) {
                     <div style={s.statBox}>
                       <span style={{ fontSize: 28, fontWeight: 800, color: passRate >= 80 ? PASS : passRate >= 50 ? '#FF9800' : FAIL }}>{passRate}%</span>
                       <span style={{ fontSize: 11, color: '#8A9BAD' }}>Pass Rate</span>
+                    </div>
+                    <div style={s.statBox}>
+                      <span style={{
+                        fontSize: isRemediated ? 14 : 16,
+                        fontWeight: 800,
+                        color: latest?.inspection_passed === 'Pass' ? PASS : isRemediated ? PASS : FAIL
+                      }}>
+                        {latest?.inspection_passed === 'Pass' ? 'PASS' : isRemediated ? 'Remediated' : 'FAIL'}
+                      </span>
+                      <span style={{ fontSize: 11, color: '#8A9BAD' }}>Status</span>
                     </div>
                   </div>
 

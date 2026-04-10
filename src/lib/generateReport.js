@@ -88,7 +88,7 @@ export async function generateFullHistoryReport(assetId, inspections, remedials 
   const completedRemedials = remedials.filter(r => r.status === 'completed')
 
   const grandTotal = sorted.length + 1 + completedRemedials.length
-  await historyCoverPage(doc, logo, project, latest, assetId, 1, grandTotal)
+  await historyCoverPage(doc, logo, project, latest, assetId, 1, grandTotal, completedRemedials)
 
   for (let i = 0; i < sorted.length; i++) {
     doc.addPage()
@@ -222,7 +222,7 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
 }
 
 // ─── History Front Sheet (Door Asset History Log) ─────────────────────────────
-async function historyCoverPage(doc, logo, project, latest, assetId, pageNum, totalPages) {
+async function historyCoverPage(doc, logo, project, latest, assetId, pageNum, totalPages, completedRemedials = []) {
   const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
   doc.setFillColor(...WHITE); doc.rect(0, 0, W, H, 'F')
   drawPageHeader(doc, logo, 'DOOR ASSET HISTORY LOG', dateStr)
@@ -236,10 +236,16 @@ async function historyCoverPage(doc, logo, project, latest, assetId, pageNum, to
 
   y += 25
   const cardW = (CW - 5) / 2
+
+  // Determine compliance status — if latest inspection failed but a remedial exists, show Remediated
+  const isPass = latest.inspection_passed === 'Pass'
+  const isRemediated = !isPass && completedRemedials.length > 0
+  const statusLabel = isRemediated ? 'REMEDIATED' : (latest.inspection_passed?.toUpperCase() || 'UNKNOWN')
+  const statusColor = isPass ? GREEN : isRemediated ? GREEN : RED
+
   doc.setFillColor(...LGREY); doc.roundedRect(ML, y, cardW, 25, 2, 2, 'F')
   doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text('CURRENT COMPLIANCE STATUS', ML + 5, y + 8)
-  const isPass = latest.inspection_passed === 'Pass'
-  doc.setFontSize(16); doc.setTextColor(...(isPass ? GREEN : RED)); doc.text(latest.inspection_passed?.toUpperCase() || 'UNKNOWN', ML + 5, y + 18)
+  doc.setFontSize(16); doc.setTextColor(...statusColor); doc.text(statusLabel, ML + 5, y + 18)
 
   doc.setFillColor(...LGREY); doc.roundedRect(ML + cardW + 5, y, cardW, 25, 2, 2, 'F')
   doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text('ESTABLISHED FIRE RATING', ML + cardW + 10, y + 8)
@@ -253,11 +259,13 @@ async function historyCoverPage(doc, logo, project, latest, assetId, pageNum, to
     ['Client:', project.client_name || 'N/A'],
     ['Site Name:', project.name || 'N/A'],
     ['Total Records:', `${totalPages - 1} Inspections`],
-    ['Latest Inspection:', new Date(latest.created_at).toLocaleDateString('en-GB')]
+    ['Latest Inspection:', new Date(latest.created_at).toLocaleDateString('en-GB')],
+    ...(isRemediated ? [['Remediated:', new Date(completedRemedials[0].completed_at).toLocaleDateString('en-GB')]] : []),
   ]
   details.forEach(([label, value], i) => {
     doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text(label, ML, y + (i * 8))
-    doc.setFont('helvetica', 'normal'); doc.setTextColor(...DARK); doc.text(String(value), ML + 40, y + (i * 8))
+    const textCol = label === 'Remediated:' ? GREEN : DARK
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(...textCol); doc.text(String(value), ML + 40, y + (i * 8))
   })
   drawFooter(doc, pageNum, totalPages)
 }
