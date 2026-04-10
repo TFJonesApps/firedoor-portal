@@ -12,7 +12,7 @@ export default function UsersPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating]     = useState(false)
   const [createError, setCreateError] = useState('')
-  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'client', client_id: '' })
+  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'client', client_id: '', full_name: '' })
   const [confirmDelete, setConfirmDelete] = useState(null) // user id pending delete
   const [actioning, setActioning] = useState(null) // user id being actioned
 
@@ -66,9 +66,10 @@ export default function UsersPage() {
         password:  newUser.password,
         role:      newUser.role,
         client_id: newUser.client_id || null,
+        full_name: newUser.full_name.trim() || null,
       })
       setShowCreate(false)
-      setNewUser({ email: '', password: '', role: 'client', client_id: '' })
+      setNewUser({ email: '', password: '', role: 'client', client_id: '', full_name: '' })
       await loadUsers()
     } catch (err) {
       setCreateError(err.message)
@@ -125,7 +126,7 @@ export default function UsersPage() {
   function isDirty(user) {
     if (!edits[user.id]) return false
     const e = edits[user.id]
-    return e.role !== user.role || e.client_id !== user.client_id
+    return e.role !== user.role || e.client_id !== user.client_id || (e.full_name || '') !== (user.full_name || '')
   }
 
   return (
@@ -161,6 +162,16 @@ export default function UsersPage() {
                   placeholder="user@example.com"
                   value={newUser.email}
                   onChange={e => setNewUser(v => ({ ...v, email: e.target.value }))}
+                />
+              </div>
+              <div style={s.formField}>
+                <label style={s.label}>Full Name</label>
+                <input
+                  style={s.input}
+                  type="text"
+                  placeholder="Full name"
+                  value={newUser.full_name}
+                  onChange={e => setNewUser(v => ({ ...v, full_name: e.target.value }))}
                 />
               </div>
               <div style={s.formField}>
@@ -218,6 +229,7 @@ export default function UsersPage() {
               <thead>
                 <tr>
                   <th style={s.th}>Email</th>
+                  <th style={s.th}>Full Name</th>
                   <th style={s.th}>Role</th>
                   <th style={s.th}>Client</th>
                   <th style={s.th}>Status</th>
@@ -234,6 +246,15 @@ export default function UsersPage() {
                     <tr key={user.id} style={{ ...s.tr, opacity: user.disabled ? 0.6 : 1 }}>
                       <td style={s.td}>
                         <span style={s.email}>{user.email || <span style={s.noEmail}>No email — user must log in once</span>}</span>
+                      </td>
+                      <td style={s.td}>
+                        <input
+                          style={s.tableInput}
+                          type="text"
+                          placeholder="Full name"
+                          value={edit.full_name || ''}
+                          onChange={e => setField(user.id, 'full_name', e.target.value)}
+                        />
                       </td>
                       <td style={s.td}>
                         <select style={s.select} value={edit.role || 'client'} onChange={e => setField(user.id, 'role', e.target.value)}>
@@ -320,6 +341,7 @@ const s = {
   formField:       { display: 'flex', flexDirection: 'column', gap: 6 },
   label:           { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' },
   input:           { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, outline: 'none' },
+  tableInput:      { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '8px 12px', color: '#fff', fontSize: 14, width: '100%', outline: 'none' },
   error:           { color: '#F44336', fontSize: 13, margin: '0 0 12px' },
   centred:         { display: 'flex', justifyContent: 'center', paddingTop: 60 },
   empty:           { color: '#8A9BAD', textAlign: 'center', paddingTop: 60 },
