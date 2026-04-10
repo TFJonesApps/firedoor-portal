@@ -105,6 +105,7 @@ export default function ProjectsPage({ role }) {
   const [createProjectError, setCreateProjectError] = useState('')
   const [inspectorUsers, setInspectorUsers] = useState([])
   const [showWhatsNew, setShowWhatsNew] = useState(false)
+  const [openRemedials, setOpenRemedials] = useState([])
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -128,7 +129,7 @@ export default function ProjectsPage({ role }) {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
-    Promise.all([fetchProjects(), fetchInspections(), fetchClients(), fetchInspectors()])
+    Promise.all([fetchProjects(), fetchInspections(), fetchClients(), fetchInspectors(), fetchOpenRemedials()])
 
     // Real-time subscriptions — auto-refresh when data changes
     const projectSub = supabase.channel('projects-changes')
@@ -137,10 +138,14 @@ export default function ProjectsPage({ role }) {
     const inspectionSub = supabase.channel('inspections-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'inspections' }, () => fetchInspections())
       .subscribe()
+    const remedialSub = supabase.channel('remedials-dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'remedials' }, () => fetchOpenRemedials())
+      .subscribe()
 
     return () => {
       supabase.removeChannel(projectSub)
       supabase.removeChannel(inspectionSub)
+      supabase.removeChannel(remedialSub)
     }
   }, [])
 
@@ -158,6 +163,15 @@ export default function ProjectsPage({ role }) {
       .order('created_at', { ascending: false })
       .limit(500)
     setInspections(data || [])
+  }
+
+  async function fetchOpenRemedials() {
+    const { data } = await supabase
+      .from('remedials')
+      .select('id, door_asset_id, recommended_action, recommended_repair_actions, status, inspections(door_location), projects(name, client_name)')
+      .in('status', ['pending', 'in_progress'])
+      .order('created_at', { ascending: false })
+    setOpenRemedials(data || [])
   }
 
   async function fetchClients() {
@@ -240,10 +254,8 @@ export default function ProjectsPage({ role }) {
   const soon    = filteredLatest.filter(i => dueInfo(i).status === 'soon').sort((a,b)    => dueInfo(a).diff - dueInfo(b).diff)
   const allDueSorted = [...filteredLatest].sort((a,b) => dueInfo(a).diff - dueInfo(b).diff)
 
-  // Remedials outstanding — latest inspection is Fail with Repair action
-  const remedialsOutstanding = useMemo(() => filteredLatest.filter(i =>
-    i.inspection_passed === 'Fail' && i.recommended_action?.toLowerCase().includes('repair')
-  ), [filteredLatest])
+  // Remedials outstanding — from actual remedials table (live updates when joiner completes)
+  const remedialsOutstanding = openRemedials
 
   // Recent feed
   const recentFeed = useMemo(() => {
@@ -525,15 +537,17 @@ export default function ProjectsPage({ role }) {
                     <div style={s.panel}>
                       {remedialsOutstanding.length === 0
                         ? <p style={{ color: '#4CAF50', fontSize: 13 }}>✓ No outstanding remedials.</p>
-                        : remedialsOutstanding.map(ins => (
-                          <div key={ins.id} style={{ ...s.feedRow, borderLeft: '3px solid #F44336', paddingLeft: 10, cursor: 'pointer' }}
+                        : remedialsOutstanding.map(rem => (
+                          <div key={rem.id} style={{ ...s.feedRow, borderLeft: `3px solid ${rem.status === 'in_progress' ? '#FF9800' : '#F44336'}`, paddingLeft: 10, cursor: 'pointer' }}
                             onClick={() => navigate('/remedials')}>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={s.feedDoor}>{ins.door_location || ins.door_asset_id || '—'}</div>
-                              <div style={s.feedProject}>{ins.projects?.name || '—'} · {ins.projects?.client_name || '—'}</div>
-                              <div style={{ ...s.feedMeta, color: '#F44336' }}>{ins.remedial_works_completed || ins.recommended_action || 'Repair required'}</div>
+                              <div style={s.feedDoor}>{rem.inspections?.door_location || rem.door_asset_id || '—'}</div>
+                              <div style={s.feedProject}>{rem.projects?.name || '—'} · {rem.projects?.client_name || '—'}</div>
+                              <div style={{ ...s.feedMeta, color: '#F44336' }}>{rem.recommended_action || 'Repair required'}</div>
                             </div>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: '#F44336', flexShrink: 0 }}>ACTION</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: rem.status === 'in_progress' ? '#FF9800' : '#F44336', flexShrink: 0 }}>
+                              {rem.status === 'in_progress' ? 'IN PROGRESS' : 'ACTION'}
+                            </span>
                           </div>
                         ))
                       }
