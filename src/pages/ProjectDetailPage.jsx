@@ -55,8 +55,10 @@ export default function ProjectDetailPage() {
 
   async function fetchData() {
     setLoading(true)
-    if (!project) {
+    let projectData = project
+    if (!projectData) {
       const { data } = await supabase.from('projects').select('*').eq('id', id).single()
+      projectData = data
       setProject(data)
     }
     const { data: ins } = await supabase
@@ -64,9 +66,33 @@ export default function ProjectDetailPage() {
       .select('*')
       .eq('project_id', id)
       .order('created_at', { ascending: false })
-    setInspections(ins || [])
+    const inspectionList = ins || []
+    const engineerIds = Array.from(new Set([
+      projectData?.engineer_id,
+      ...inspectionList.map(i => i.engineer_id),
+    ].filter(Boolean)))
+    if (engineerIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email')
+        .in('id', engineerIds)
+      const idToName = {}
+      for (const p of profiles || []) {
+        idToName[p.id] = p.full_name || p.email || ''
+      }
+      const withNames = inspectionList.map(i => ({
+        ...i,
+        engineer_full_name: idToName[i.engineer_id] || null,
+      }))
+      setInspections(withNames)
+      if (projectData?.engineer_id && idToName[projectData.engineer_id]) {
+        setProject(prev => ({ ...prev, engineer_full_name: idToName[projectData.engineer_id] }))
+      }
+    } else {
+      setInspections(inspectionList)
+    }
     // Check which doors have been remediated (completed remedial in any project)
-    const assetIds = (ins || []).map(i => i.door_asset_id).filter(Boolean)
+    const assetIds = inspectionList.map(i => i.door_asset_id).filter(Boolean)
     if (assetIds.length > 0) {
       const { data: rems } = await supabase
         .from('remedials')
@@ -327,7 +353,7 @@ export default function ProjectDetailPage() {
           )}
           <div style={{ textAlign: 'right' }}>
             <div style={{ color: GREY, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Inspector</div>
-            <div style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>{(project?.engineer_name && !project.engineer_name.includes('@')) ? project.engineer_name : '—'}</div>
+            <div style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>{(project?.engineer_full_name || project?.engineer_name) || '—'}</div>
           </div>
         </div>
 
@@ -451,7 +477,7 @@ function InspectionCard({ inspection: ins, project, expanded, onToggle, onPhoto,
     ['Repair Actions',       ins.recommended_repair_actions],
     ['Other Repair Actions', ins.other_repair_actions],
     ['Replacement Reason',   ins.replacement_reason],
-    ['Inspector',            (ins.engineer_name && !ins.engineer_name.includes('@')) ? ins.engineer_name : (project?.engineer_name && !project.engineer_name.includes('@')) ? project.engineer_name : ins.engineer_name],
+    ['Inspector',            ins.engineer_full_name || project?.engineer_full_name || ins.engineer_name || project?.engineer_name],
   ].filter(([, v]) => v)
 
   return (

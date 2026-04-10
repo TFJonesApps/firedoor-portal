@@ -64,7 +64,28 @@ async function search(id) {
     console.error('Search error:', insResult.error)
     setInspections([])
   } else {
-    setInspections(insResult.data || [])
+    const list = insResult.data || []
+    const engineerIds = Array.from(new Set(list.map(i => i.engineer_id).filter(Boolean)))
+    if (engineerIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email')
+        .in('id', engineerIds)
+      const idToName = {}
+      for (const p of profiles || []) {
+        idToName[p.id] = p.full_name || p.email || ''
+      }
+      const withNames = list.map(i => ({
+        ...i,
+        engineer_full_name: idToName[i.engineer_id] || null,
+        projects: i.projects
+          ? { ...i.projects, engineer_full_name: idToName[i.projects.engineer_id] || null }
+          : i.projects,
+      }))
+      setInspections(withNames)
+    } else {
+      setInspections(list)
+    }
   }
   setRemedials(remResult.data || [])
 
@@ -251,7 +272,7 @@ async function search(id) {
                                   <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>{date}</span>
                                 </div>
                                 <p style={{ color: '#8A9BAD', fontSize: 13, margin: '4px 0 0' }}>
-                                  {ins.projects?.name || '—'} &middot; {(ins.engineer_name && !ins.engineer_name.includes('@')) ? ins.engineer_name : '—'}
+                                  {ins.projects?.name || '—'} &middot; {(ins.engineer_full_name || ins.engineer_name) || '—'}
                                 </p>
                                 {ins.projects?.client_name && (
                                   <p style={{ color: YELLOW, fontSize: 12, margin: '2px 0 0', fontWeight: 600 }}>{ins.projects.client_name}</p>

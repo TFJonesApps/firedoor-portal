@@ -194,7 +194,7 @@ export default function ProjectsPage({ role }) {
   async function fetchInspectors() {
     const { data } = await supabase
       .from('user_profiles')
-      .select('id, email')
+      .select('id, email, full_name')
       .eq('role', 'inspector')
       .order('email')
     setInspectorUsers(data || [])
@@ -207,7 +207,7 @@ export default function ProjectsPage({ role }) {
     try {
       const inspector = inspectorUsers.find(u => u.id === newProject.engineer_id)
       const engineerEmail = inspector?.email || ''
-      const engineerName = KNOWN_ENGINEERS[engineerEmail.toLowerCase()] || engineerEmail
+      const engineerName = inspector?.full_name || KNOWN_ENGINEERS[engineerEmail.toLowerCase()] || engineerEmail
       const client = clients.find(c => c.id === newProject.client_id)
       const { error } = await supabase.from('projects').insert({
         name: newProject.name,
@@ -674,7 +674,7 @@ export default function ProjectsPage({ role }) {
                 <label style={s.cpLabel}>Assign to Inspector *</label>
                 <select style={s.cpInput} required value={newProject.engineer_id} onChange={e => setNewProject(v => ({ ...v, engineer_id: e.target.value }))}>
                   <option value="">— Select Inspector —</option>
-                  {inspectorUsers.map(u => <option key={u.id} value={u.id}>{KNOWN_ENGINEERS[u.email?.toLowerCase()] || u.email}</option>)}
+                  {inspectorUsers.map(u => <option key={u.id} value={u.id}>{u.full_name || KNOWN_ENGINEERS[u.email?.toLowerCase()] || u.email}</option>)}
                 </select>
               </div>
             </div>
@@ -1270,4 +1270,3 @@ const s = {
   cpInput:   { background: '#162840', border: '1px solid #243F5C', borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, outline: 'none' },
   cpSave:    { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer' },
 }
-

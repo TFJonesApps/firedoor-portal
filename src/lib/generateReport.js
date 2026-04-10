@@ -27,6 +27,18 @@ const CLIENT_LOGOS = {
   'Lancaster City Council':       'lancastercc.png',
 }
 
+function getInspectorDisplayName(ins, project) {
+  const candidates = [
+    ins?.engineer_full_name,
+    project?.engineer_full_name,
+    ins?.engineer_name,
+    project?.engineer_name,
+  ].filter(Boolean)
+  if (candidates.length === 0) return null
+  const nonEmail = candidates.find(n => !String(n).includes('@'))
+  return nonEmail || candidates[0]
+}
+
 // Small helper: yield to the event loop so the browser can GC and repaint.
 // Prevents tab freezes / OOM crashes on large (40+ door) reports.
 const yieldToBrowser = () => new Promise(resolve => setTimeout(resolve, 0))
@@ -191,7 +203,7 @@ async function coverPage(doc, logo, clientLogo, project, inspections) {
 
   const infoRows = [
     ['Client', project.client_name || '—'],
-    ['Fire Door Inspector', [project.engineer_name, inspections[0]?.engineer_name].find(n => n && !n.includes('@')) || '—'],
+    ['Fire Door Inspector', getInspectorDisplayName(inspections[0], project) || '—'],
     ['Address', [project.address, project.postcode].filter(Boolean).join(', ') || '—'],
     project.order_number ? ['Order Number', project.order_number] : null,
     ['Report Date', dateStr],
@@ -370,7 +382,7 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
   doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255) 
   doc.text(passLabel, badgeX + badgeW / 2, headY + 11, { align: 'center' }) 
 
-  const inspectorName = [ins.engineer_name, project.engineer_name].find(n => n && !n.includes('@')) || null
+  const inspectorName = getInspectorDisplayName(ins, project)
   const meta = [ins.door_asset_id && `Asset ID: ${ins.door_asset_id}`, ins.fire_rating, new Date(ins.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }), inspectorName && `Inspector: ${inspectorName}`].filter(Boolean).join(' · ')
   doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE); doc.text(meta, ML + 7, headY + headH - 4) 
 
