@@ -669,6 +669,45 @@ export default function ProjectsPage({ role }) {
             {/* Scrollable content */}
             <div style={{ overflowY: 'auto', padding: '20px 36px 28px', overscrollBehavior: 'contain' }}>
 
+            <p style={{ color: '#FF9800', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 16px' }}>Latest Updates — April 2026</p>
+            {[
+              {
+                icon: '🛠️',
+                title: 'Remedial Works — Full Lifecycle',
+                desc: 'Failed inspections now automatically create remedial work items. Joiners claim and complete repairs via the TFJ Remedials app, uploading before/after photos and completion notes. The dashboard updates in real-time as repairs are submitted.'
+              },
+              {
+                icon: '📄',
+                title: 'Remedial Evidence PDFs',
+                desc: 'Download a full evidence PDF for any completed remedial — includes door info, action required, joiner details, completion notes, and side-by-side before/after photos. Evidence pages are also appended to the Door History PDF automatically.'
+              },
+              {
+                icon: '✅',
+                title: 'Remediated Status',
+                desc: 'When a failed door has been repaired, its compliance status updates to "Remediated" across the portal and PDFs — so clients can see at a glance what\'s been fixed, who did it, and when.'
+              },
+              {
+                icon: '🕐',
+                title: 'Door History Timeline',
+                desc: 'Door History now shows inspections and completed repairs in a single merged timeline. Repair cards show the joiner, action taken, completion notes, and before/after photos — giving a full audit trail for every door.'
+              },
+              {
+                icon: '📝',
+                title: 'Free Text Repair Actions',
+                desc: 'Inspectors can now add custom repair actions via a free text field if the issue isn\'t covered by the standard selection list. These show on the portal, in project details, and on PDFs.'
+              },
+            ].map(({ icon, title, desc }) => (
+              <div key={title} style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
+                <span style={{ fontSize: 22, lineHeight: 1, marginTop: 2, flexShrink: 0 }}>{icon}</span>
+                <div>
+                  <p style={{ color: '#EEFF00', fontSize: 13, fontWeight: 700, margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</p>
+                  <p style={{ color: '#CBD5E1', fontSize: 13, margin: 0, lineHeight: 1.6 }}>{desc}</p>
+                </div>
+              </div>
+            ))}
+
+            <div style={{ borderTop: '1px solid #1A3A5C', margin: '8px 0 20px' }} />
+            <p style={{ color: '#64748B', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 16px' }}>Portal Features</p>
             {[
               {
                 icon: '📋',
@@ -686,11 +725,6 @@ export default function ProjectsPage({ role }) {
                 desc: 'Hit Reinspect on any project to instantly create a new reinspection job with the same site details and door list pre-loaded — no duplicate data entry needed.'
               },
               {
-                icon: '🛠️',
-                title: 'Remedial Works',
-                desc: 'Any failed doors automatically generate remedial work items. The Remedial Works panel tracks what\'s outstanding so nothing slips through the cracks.'
-              },
-              {
                 icon: '📅',
                 title: 'Reinspection Due',
                 desc: 'The Reinspection Due panel shows upcoming scheduled revisits sorted by date. Click Calendar to see them in a monthly view and plan your workload ahead of time.'
@@ -699,11 +733,6 @@ export default function ProjectsPage({ role }) {
                 icon: '📊',
                 title: 'Export',
                 desc: 'Use the Export button to download your inspection data. Great for sending reports to clients or keeping records off-platform.'
-              },
-              {
-                icon: '🕐',
-                title: 'Door History',
-                desc: 'Door History gives you a full audit trail across all projects — search any door to see every inspection it\'s ever had.'
               },
               {
                 icon: '👥',
