@@ -283,7 +283,7 @@ export default function UsersPage() {
                       </td>
                       <td style={s.tdAction}>
                         {pending ? (
-                          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
                             <span style={{ color: '#F44336', fontSize: 13, fontWeight: 600 }}>Delete?</span>
                             <button style={s.deleteConfirmBtn} onClick={() => deleteUser(user.id)} disabled={busy}>
                               {busy ? '…' : 'Yes, Delete'}
@@ -291,7 +291,7 @@ export default function UsersPage() {
                             <button style={s.cancelBtn} onClick={() => setConfirmDelete(null)}>Cancel</button>
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                             <button
                               style={{ ...s.saveBtn, opacity: dirty ? 1 : 0.3, cursor: dirty ? 'pointer' : 'default' }}
                               disabled={!dirty || saving === user.id}
@@ -333,39 +333,39 @@ const s = {
   headerRight:     { display: 'flex', alignItems: 'center', gap: 12 },
   logo:            { height: 42, objectFit: 'contain' },
   backBtn:         { background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '7px 14px', color: '#EEFF00', fontSize: 13, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' },
-  body:            { padding: '40px 36px', maxWidth: 1240, margin: '0 auto' },
+  body:            { padding: '32px 28px', maxWidth: 1100, margin: '0 auto' },
   title:           { color: '#fff', fontSize: 26, fontWeight: 800, margin: 0 },
   createBtn:       { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
-  createForm:      { background: '#162840', borderRadius: 16, padding: '24px 28px', marginBottom: 30 },
-  formGrid:        { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 },
+  createForm:      { background: '#162840', borderRadius: 14, padding: '20px 24px', marginBottom: 24 },
+  formGrid:        { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 },
   formField:       { display: 'flex', flexDirection: 'column', gap: 6 },
   label:           { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' },
-  input:           { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 14, outline: 'none', lineHeight: 1.4 },
-  tableInput:      { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 14, width: '100%', outline: 'none', lineHeight: 1.4 },
+  input:           { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, outline: 'none' },
+  tableInput:      { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '8px 12px', color: '#fff', fontSize: 14, width: '100%', outline: 'none' },
   error:           { color: '#F44336', fontSize: 13, margin: '0 0 12px' },
   centred:         { display: 'flex', justifyContent: 'center', paddingTop: 60 },
   empty:           { color: '#8A9BAD', textAlign: 'center', paddingTop: 60 },
-  tableWrap:       { background: '#162840', borderRadius: 16, overflow: 'hidden', marginTop: 28, padding: 6 },
-  table:           { width: '100%', borderCollapse: 'separate', borderSpacing: '0 10px', tableLayout: 'fixed' },
-  th:              { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '14px 22px 10px', textAlign: 'left', borderBottom: '1px solid #1A3A5C' },
-  thEmail:         { width: 230 },
+  tableWrap:       { background: '#162840', borderRadius: 14, overflow: 'hidden', marginTop: 24 },
+  table:           { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
+  th:              { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '14px 20px', textAlign: 'left', borderBottom: '1px solid #1A3A5C' },
+  thEmail:         { width: 240 },
   thName:          { width: 200 },
-  thRole:          { width: 190 },
-  thClient:        { width: 210 },
-  thStatus:        { width: 160 },
-  tr:              { borderRadius: 12, background: '#15263F' },
-  td:              { padding: '18px 22px', verticalAlign: 'middle' },
-  tdRole:          { width: 190 },
-  tdClient:        { width: 210 },
-  tdStatus:        { width: 160, paddingRight: 12 },
-  tdAction:        { padding: '18px 22px', verticalAlign: 'middle', textAlign: 'right', minWidth: 0 },
+  thRole:          { width: 170 },
+  thClient:        { width: 200 },
+  thStatus:        { width: 120 },
+  tr:              { borderBottom: '1px solid #1A3A5C' },
+  td:              { padding: '14px 20px', verticalAlign: 'middle' },
+  tdRole:          { width: 170 },
+  tdClient:        { width: 200 },
+  tdStatus:        { width: 120 },
+  tdAction:        { padding: '14px 20px', verticalAlign: 'middle', textAlign: 'right', minWidth: 260 },
   email:           { color: '#fff', fontSize: 14, fontWeight: 600 },
   noEmail:         { color: '#8A9BAD', fontSize: 13, fontStyle: 'italic', fontWeight: 400 },
-  select:          { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 14, width: '100%', lineHeight: 1.4 },
+  select:          { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '8px 12px', color: '#fff', fontSize: 14, width: '100%' },
   badge:           { display: 'inline-block', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700 },
-  saveBtn:         { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
-  disableBtn:      { borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
-  deleteBtn:       { background: '#F4433622', color: '#F44336', border: '1px solid #F44336', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
-  deleteConfirmBtn:{ background: '#F44336', color: '#fff', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
-  cancelBtn:       { background: 'transparent', color: '#8A9BAD', border: '1px solid #8A9BAD', borderRadius: 10, padding: '8px 14px', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' },
+  saveBtn:         { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+  disableBtn:      { borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+  deleteBtn:       { background: '#F4433622', color: '#F44336', border: '1px solid #F44336', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+  deleteConfirmBtn:{ background: '#F44336', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
+  cancelBtn:       { background: 'transparent', color: '#8A9BAD', border: '1px solid #8A9BAD', borderRadius: 8, padding: '8px 16px', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' },
 }
