@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { generateRemedialEvidence } from '../lib/generateReport'
 
 export default function RemedialsPage() {
   const navigate = useNavigate()
@@ -28,6 +29,7 @@ export default function RemedialsPage() {
 
   // View detail
   const [viewTarget, setViewTarget]         = useState(null) // remedial row
+  const [generatingPdf, setGeneratingPdf]   = useState(null) // remedial id
 
   useEffect(() => {
     fetchRemedials()
@@ -87,6 +89,16 @@ export default function RemedialsPage() {
       closed_at: null,
       closed_by: null,
     }).eq('id', rem.id)
+  }
+
+  async function downloadEvidence(rem) {
+    setGeneratingPdf(rem.id)
+    try {
+      await generateRemedialEvidence(rem)
+    } catch (e) {
+      console.error('Evidence PDF failed:', e)
+    }
+    setGeneratingPdf(null)
   }
 
   // Unique clients from remedials data
@@ -228,6 +240,15 @@ export default function RemedialsPage() {
                       <td style={s.td}>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button style={s.actionBtn} onClick={() => setViewTarget(r)}>View</button>
+                          {r.status === 'completed' && (
+                            <button
+                              style={{ ...s.actionBtn, borderColor: '#4CAF50', color: '#4CAF50', opacity: generatingPdf === r.id ? 0.6 : 1 }}
+                              disabled={generatingPdf === r.id}
+                              onClick={() => downloadEvidence(r)}
+                            >
+                              {generatingPdf === r.id ? '...' : 'PDF'}
+                            </button>
+                          )}
                           {(r.status === 'pending' || r.status === 'in_progress') && (
                             <button style={{ ...s.actionBtn, borderColor: '#64748B', color: '#64748B' }} onClick={() => { setCloseTarget(r); setCloseReason('') }}>
                               Close

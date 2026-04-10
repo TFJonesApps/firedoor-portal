@@ -82,8 +82,13 @@ async function search(id) {
     if (inspections.length === 0) return
     setGeneratingHistory(true)
     try {
-      // Logic assumes your lib handles the array of inspections
-      await generateFullHistoryReport(assetId, inspections)
+      // Fetch completed remedials for this asset to include evidence pages
+      const { data: remedials } = await supabase
+        .from('remedials')
+        .select('*, inspections(door_location, door_asset_id, fire_rating), projects(name, client_name, address, postcode)')
+        .eq('door_asset_id', assetId)
+        .eq('status', 'completed')
+      await generateFullHistoryReport(assetId, inspections, remedials || [])
     } catch (e) {
       console.error('History PDF generation failed:', e)
     }

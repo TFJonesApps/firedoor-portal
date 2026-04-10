@@ -78,15 +78,16 @@ export async function generateSingleInspectionReport(project, inspection) {
 } 
 
 // ─── Entry point: Full History Report ───────────────────────────────────────── 
-export async function generateFullHistoryReport(assetId, inspections) {
+export async function generateFullHistoryReport(assetId, inspections, remedials = []) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null)
-  
+
   const sorted = [...inspections].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
   const latest = sorted[0]
   const project = latest.projects || { name: 'Asset History Log', client_name: '' }
-  
-  const grandTotal = sorted.length + 1
+  const completedRemedials = remedials.filter(r => r.status === 'completed')
+
+  const grandTotal = sorted.length + 1 + completedRemedials.length
   await historyCoverPage(doc, logo, project, latest, assetId, 1, grandTotal)
 
   for (let i = 0; i < sorted.length; i++) {
@@ -94,6 +95,16 @@ export async function generateFullHistoryReport(assetId, inspections) {
     await inspectionPage(doc, logo, project, sorted[i], i + 2, grandTotal)
     if ((i + 1) % 3 === 0) await yieldToBrowser()
   }
+
+  // Append remedial evidence pages
+  let nextPage = sorted.length + 2
+  for (let i = 0; i < completedRemedials.length; i++) {
+    doc.addPage()
+    const pagesUsed = await remedialEvidencePage(doc, logo, completedRemedials[i], nextPage, grandTotal)
+    nextPage += pagesUsed
+    if ((i + 1) % 3 === 0) await yieldToBrowser()
+  }
+
   doc.save(`History_${assetId}.pdf`)
 }
 
@@ -540,6 +551,149 @@ function drawSummaryRow(doc, ins, y, rowIndex) {
     by + bh / 2 + 1.3,
     { align: 'center', baseline: 'alphabetic' }
   )
+}
+
+// ─── Entry point: Remedial Evidence Report ────────────────────────────────────
+export async function generateRemedialEvidence(remedial) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const logo = await loadLogoImage('/NEW - TFJ Logo - Enhancing Building Safety Logo Transparent - Blue and White.png').catch(() => null)
+  const totalPages = 1 + (((remedial.before_photo_urls?.length || 0) + (remedial.after_photo_urls?.length || 0)) > 4 ? 1 : 0)
+  await remedialEvidencePage(doc, logo, remedial, 1, totalPages)
+  const location = remedial.inspections?.door_location || remedial.door_asset_id || 'remedial'
+  doc.save(`Remedial_Evidence_${location.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`)
+}
+
+// ─── Remedial Evidence Page (reusable for embedding in history) ──────────────
+async function remedialEvidencePage(doc, logo, rem, startPage, totalPages) {
+  let pageNum = startPage
+  doc.setFillColor(...WHITE); doc.rect(0, 0, W, H, 'F')
+  drawPageHeader(doc, logo, 'REMEDIAL EVIDENCE REPORT', new Date(rem.completed_at || rem.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }))
+
+  let y = 34
+
+  // Door info table
+  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY); doc.text('Door Information', ML, y)
+  y += 4; doc.setFillColor(...MGREY); doc.rect(ML, y, CW, 0.4, 'F'); y += 0.4
+
+  const infoRows = [
+    ['Location', rem.inspections?.door_location || '—'],
+    ['Asset ID', rem.door_asset_id || rem.inspections?.door_asset_id || '—'],
+    ['Fire Rating', rem.inspections?.fire_rating || '—'],
+    ['Project', rem.projects?.name || '—'],
+    ['Client', rem.projects?.client_name || '—'],
+    ['Address', [rem.projects?.address, rem.projects?.postcode].filter(Boolean).join(', ') || '—'],
+  ].filter(([, v]) => v && v !== '—')
+
+  infoRows.forEach(([label, value], i) => {
+    const rh = 8.5; const ry = y + i * rh
+    doc.setFillColor(...(i % 2 === 0 ? LGREY : WHITE)); doc.rect(ML, ry, CW, rh, 'F')
+    doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text(label, ML + 3, ry + 5.8)
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(...DARK)
+    const val = doc.splitTextToSize(value, CW * 0.55)[0]
+    doc.text(val, ML + CW - 3, ry + 5.8, { align: 'right' })
+  })
+  y += infoRows.length * 8.5 + 6
+
+  // Action required section (orange themed)
+  doc.setFillColor(...ORANGE); doc.rect(ML, y, CW, 6.5, 'F')
+  doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...WHITE); doc.text('ACTION REQUIRED', ML + 2.5, y + 4.5)
+  const severityLabel = (rem.recommended_action || '').toLowerCase().includes('replace') ? 'REPLACE' : 'REPAIR'
+  const badgeW = 22; const badgeX = ML + CW - badgeW - 2
+  doc.setFillColor(...RED); doc.roundedRect(badgeX, y + 1, badgeW, 4.5, 1, 1, 'F')
+  doc.setFontSize(5.5); doc.setTextColor(...WHITE); doc.text(severityLabel, badgeX + badgeW / 2, y + 4.2, { align: 'center' })
+  y += 6.5
+
+  const actionRows = [
+    ['Recommended Action', rem.recommended_action],
+    ['Repair Details', rem.recommended_repair_actions],
+  ].filter(([, v]) => v)
+  actionRows.forEach(([label, value], i) => {
+    const valLines = doc.splitTextToSize(String(value), CW * 0.55)
+    const rh = Math.max(8.5, valLines.length * 4.5 + 4)
+    doc.setFillColor(...(i % 2 === 0 ? ORANGE_LIGHT : WHITE)); doc.rect(ML, y, CW, rh, 'F')
+    doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text(label, ML + 3, y + 5.8)
+    doc.setFont('helvetica', 'bold'); doc.setTextColor(...RED); doc.text(valLines, ML + CW - 3, y + 5.8, { align: 'right' })
+    y += rh
+  })
+  doc.setDrawColor(...ORANGE); doc.setLineWidth(0.6)
+  doc.rect(ML, y - actionRows.reduce((s, [, v], i) => { const vl = doc.splitTextToSize(String(v), CW * 0.55); return s + Math.max(8.5, vl.length * 4.5 + 4) }, 0) - 6.5, CW, actionRows.reduce((s, [, v]) => { const vl = doc.splitTextToSize(String(v), CW * 0.55); return s + Math.max(8.5, vl.length * 4.5 + 4) }, 0) + 6.5)
+  doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.2)
+  y += 6
+
+  // Completion info section
+  doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY); doc.text('Completion Details', ML, y)
+  y += 4; doc.setFillColor(...MGREY); doc.rect(ML, y, CW, 0.4, 'F'); y += 0.4
+
+  const completionRows = [
+    ['Completed By', rem.joiner_name || '—'],
+    ['Completed', rem.completed_at ? new Date(rem.completed_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'],
+    ['Notes', rem.completion_notes || '—'],
+  ].filter(([, v]) => v && v !== '—')
+
+  completionRows.forEach(([label, value], i) => {
+    const valLines = doc.splitTextToSize(String(value), CW * 0.6)
+    const rh = Math.max(8.5, valLines.length * 4.5 + 4)
+    doc.setFillColor(...(i % 2 === 0 ? LGREY : WHITE)); doc.rect(ML, y, CW, rh, 'F')
+    doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text(label, ML + 3, y + 5.8)
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(...DARK); doc.text(valLines, ML + CW - 3, y + 5.8, { align: 'right' })
+    y += rh
+  })
+  y += 6
+
+  // Photo sections
+  const FOOTER_H = 14
+  const PHOTO_GAP = 4
+  const PHOTO_COL_W = (CW - PHOTO_GAP) / 2
+
+  async function drawPhotoGrid(photos, title) {
+    if (!photos || photos.length === 0) return
+
+    // Check if we need a new page
+    if (y + 60 > H - FOOTER_H) {
+      drawFooter(doc, pageNum, totalPages)
+      doc.addPage(); pageNum++
+      doc.setFillColor(...WHITE); doc.rect(0, 0, W, H, 'F')
+      drawPageHeader(doc, logo, 'REMEDIAL EVIDENCE REPORT', 'PHOTOGRAPHS')
+      y = 34
+    }
+
+    // Section header
+    doc.setFillColor(...LGREY); doc.rect(ML, y, CW, 7, 'F')
+    doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY); doc.text(title, ML + 5.5, y + 4.8)
+    y += 10
+
+    const numRows = Math.ceil(photos.length / 2)
+    const available = H - FOOTER_H - y
+    const idealCellH = (available - (numRows - 1) * 3 - numRows * 5) / numRows
+    const CELL_H = Math.max(25, Math.min(55, idealCellH))
+    const ROW_H = CELL_H + 5 + 3
+
+    for (let i = 0; i < Math.min(photos.length, 4); i++) {
+      const col = i % 2
+      const px = ML + col * (PHOTO_COL_W + PHOTO_GAP)
+      doc.setFillColor(...LGREY); doc.roundedRect(px, y, PHOTO_COL_W, CELL_H + 5, 1, 1, 'F')
+      doc.setFontSize(6); doc.setFont('helvetica', 'bold'); doc.setTextColor(...SLATE); doc.text(`Photo ${i + 1}`, px + 2, y + 4)
+      try {
+        const img = await loadImage(photos[i])
+        const imgEl = await getImageDimensions(img)
+        const maxW = PHOTO_COL_W - 2, maxH = CELL_H - 2
+        const ratio = imgEl.width / imgEl.height
+        let dw = maxW, dh = dw / ratio
+        if (dh > maxH) { dh = maxH; dw = dh * ratio }
+        const ox = px + (PHOTO_COL_W - dw) / 2
+        const oy = y + 5 + (CELL_H - dh) / 2
+        doc.addImage(img, 'JPEG', ox, oy, dw, dh)
+      } catch (_) {}
+      if (col === 1 || i === photos.length - 1) y += ROW_H
+    }
+    y += 2
+  }
+
+  await drawPhotoGrid(rem.before_photo_urls, 'BEFORE — EVIDENCE OF DAMAGE')
+  await drawPhotoGrid(rem.after_photo_urls, 'AFTER — COMPLETED REPAIR')
+
+  drawFooter(doc, pageNum, totalPages)
+  return pageNum - startPage + 1 // number of pages used
 }
 
 // ─── Image helpers ────────────────────────────────────────────────────────────
