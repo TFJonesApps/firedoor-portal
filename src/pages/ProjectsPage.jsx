@@ -26,18 +26,19 @@ const KNOWN_ENGINEERS = {
 
 const PANEL_LABELS = {
   projects: 'Projects', recent: 'Recent Inspections',
-  remedials: 'Remedial Works', reinspection: 'Reinspection Due', workload: 'Inspector Workload',
+  remedials: 'Remedial Works', completed: 'Completed Remedials', reinspection: 'Reinspection Due', workload: 'Inspector Workload',
 }
 
 const DEFAULT_LAYOUT = [
   { i: 'projects',     x: 0, y: 0,  w: 8, h: 12, minW: 2, minH: 2 },
   { i: 'recent',       x: 8, y: 0,  w: 4, h: 12, minW: 2, minH: 2 },
   { i: 'remedials',    x: 0, y: 12, w: 4, h: 8,  minW: 2, minH: 2 },
-  { i: 'reinspection', x: 4, y: 12, w: 4, h: 10, minW: 2, minH: 2 },
-  { i: 'workload',     x: 8, y: 12, w: 4, h: 6,  minW: 2, minH: 2 },
+  { i: 'completed',    x: 4, y: 12, w: 4, h: 8,  minW: 2, minH: 2 },
+  { i: 'reinspection', x: 8, y: 12, w: 4, h: 10, minW: 2, minH: 2 },
+  { i: 'workload',     x: 0, y: 22, w: 12, h: 6, minW: 2, minH: 2 },
 ]
 
-const LAYOUT_KEY = 'dashboardLayout4'
+const LAYOUT_KEY = 'dashboardLayout5'
 
 function loadLayout() {
   try {
@@ -106,6 +107,7 @@ export default function ProjectsPage({ role }) {
   const [inspectorUsers, setInspectorUsers] = useState([])
   const [showWhatsNew, setShowWhatsNew] = useState(false)
   const [openRemedials, setOpenRemedials] = useState([])
+  const [completedRemedials, setCompletedRemedials] = useState([])
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -129,7 +131,7 @@ export default function ProjectsPage({ role }) {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
-    Promise.all([fetchProjects(), fetchInspections(), fetchClients(), fetchInspectors(), fetchOpenRemedials()])
+    Promise.all([fetchProjects(), fetchInspections(), fetchClients(), fetchInspectors(), fetchOpenRemedials(), fetchCompletedRemedials()])
 
     // Real-time subscriptions — auto-refresh when data changes
     const projectSub = supabase.channel('projects-changes')
@@ -139,7 +141,7 @@ export default function ProjectsPage({ role }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'inspections' }, () => fetchInspections())
       .subscribe()
     const remedialSub = supabase.channel('remedials-dashboard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'remedials' }, () => fetchOpenRemedials())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'remedials' }, () => { fetchOpenRemedials(); fetchCompletedRemedials() })
       .subscribe()
 
     return () => {
@@ -172,6 +174,16 @@ export default function ProjectsPage({ role }) {
       .in('status', ['pending', 'in_progress'])
       .order('created_at', { ascending: false })
     setOpenRemedials(data || [])
+  }
+
+  async function fetchCompletedRemedials() {
+    const { data } = await supabase
+      .from('remedials')
+      .select('id, door_asset_id, recommended_action, joiner_name, completed_at, status, inspections(door_location), projects(name, client_name)')
+      .eq('status', 'completed')
+      .order('completed_at', { ascending: false })
+      .limit(20)
+    setCompletedRemedials(data || [])
   }
 
   async function fetchClients() {
@@ -548,6 +560,33 @@ export default function ProjectsPage({ role }) {
                             <span style={{ fontSize: 11, fontWeight: 700, color: rem.status === 'in_progress' ? '#FF9800' : '#F44336', flexShrink: 0 }}>
                               {rem.status === 'in_progress' ? 'IN PROGRESS' : 'ACTION'}
                             </span>
+                          </div>
+                        ))
+                      }
+                    </div>
+                  </>
+                )}
+
+                {id === 'completed' && (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <SectionTitle style={{ margin: 0 }}>Completed Remedials</SectionTitle>
+                      <button onClick={() => navigate('/remedials?status=completed')} style={{ background: 'none', border: '1px solid #4CAF50', borderRadius: 4, padding: '4px 12px', color: '#4CAF50', fontSize: 11, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }}>View All</button>
+                    </div>
+                    <div style={s.panel}>
+                      {completedRemedials.length === 0
+                        ? <p style={{ color: '#8A9BAD', fontSize: 13 }}>No completed remedials yet.</p>
+                        : completedRemedials.map(rem => (
+                          <div key={rem.id} style={{ ...s.feedRow, borderLeft: '3px solid #4CAF50', paddingLeft: 10, cursor: 'pointer' }}
+                            onClick={() => navigate('/remedials?status=completed')}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={s.feedDoor}>{rem.inspections?.door_location || rem.door_asset_id || '—'}</div>
+                              <div style={s.feedProject}>{rem.projects?.name || '—'} · {rem.projects?.client_name || '—'}</div>
+                              <div style={{ ...s.feedMeta, color: '#8A9BAD' }}>
+                                {rem.joiner_name || '—'} · {rem.completed_at ? new Date(rem.completed_at).toLocaleDateString('en-GB') : '—'}
+                              </div>
+                            </div>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#4CAF50', flexShrink: 0 }}>DONE</span>
                           </div>
                         ))
                       }

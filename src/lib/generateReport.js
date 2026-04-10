@@ -522,10 +522,10 @@ function drawPageHeader(doc, logo, rightTitle, rightSub, showLogo = true) {
   if (rightSub) { doc.setFontSize(8.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...DARK); doc.text(rightSub, W - MR, 19, { align: 'right' }) } 
 } 
 
-function drawFooter(doc, pageNum, totalPages) { 
-  doc.setFillColor(...NAVY); doc.rect(0, H - 12, W, 12, 'F') 
-  doc.setFontSize(7); doc.setTextColor(130, 155, 175); doc.text('TF Jones · Fire Door Inspection', ML, H - 4.5) 
-  doc.setFont('helvetica', 'bold'); doc.setTextColor(...WHITE); doc.text(`Page ${pageNum} of ${totalPages}`, W - MR, H - 4.5, { align: 'right' }) 
+function drawFooter(doc, pageNum, totalPages, label = 'Fire Door Inspection') {
+  doc.setFillColor(...NAVY); doc.rect(0, H - 12, W, 12, 'F')
+  doc.setFontSize(7); doc.setTextColor(130, 155, 175); doc.text(`TF Jones · ${label}`, ML, H - 4.5)
+  doc.setFont('helvetica', 'bold'); doc.setTextColor(...WHITE); doc.text(`Page ${pageNum} of ${totalPages}`, W - MR, H - 4.5, { align: 'right' })
 } 
 
 const SUM_ROW_H = 7; const SUM_HEAD_H = 8 
@@ -581,7 +581,7 @@ async function remedialEvidencePage(doc, logo, rem, startPage, totalPages) {
   const HALF_W = (CW - PHOTO_GAP) / 2
 
   function newPage(subtitle) {
-    drawFooter(doc, pageNum, totalPages)
+    drawFooter(doc, pageNum, totalPages, 'Fire Door Remedial')
     doc.addPage(); pageNum++
     doc.setFillColor(...WHITE); doc.rect(0, 0, W, H, 'F')
     drawPageHeader(doc, logo, 'REMEDIAL EVIDENCE REPORT', subtitle || '')
@@ -739,7 +739,7 @@ async function remedialEvidencePage(doc, logo, rem, startPage, totalPages) {
     }
   }
 
-  drawFooter(doc, pageNum, totalPages)
+  drawFooter(doc, pageNum, totalPages, 'Fire Door Remedial')
   return pageNum - startPage + 1
 }
 
