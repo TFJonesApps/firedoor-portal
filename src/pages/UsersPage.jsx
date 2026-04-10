@@ -232,7 +232,7 @@ export default function UsersPage() {
                   <th style={{ ...s.th, ...s.thName }}>Full Name</th>
                   <th style={{ ...s.th, ...s.thRole }}>Role</th>
                   <th style={{ ...s.th, ...s.thClient }}>Client</th>
-                  <th style={s.th}>Status</th>
+                  <th style={{ ...s.th, ...s.thStatus }}>Status</th>
                   <th style={s.th}></th>
                 </tr>
               </thead>
@@ -276,7 +276,7 @@ export default function UsersPage() {
                           {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                       </td>
-                      <td style={s.td}>
+                      <td style={{ ...s.td, ...s.tdStatus }}>
                         <span style={{ ...s.badge, background: user.disabled ? '#F4433622' : '#4CAF5022', color: user.disabled ? '#F44336' : '#4CAF50', border: `1px solid ${user.disabled ? '#F44336' : '#4CAF50'}` }}>
                           {user.disabled ? 'Disabled' : 'Active'}
                         </span>
@@ -352,11 +352,13 @@ const s = {
   thName:          { width: 190 },
   thRole:          { width: 180 },
   thClient:        { width: 220 },
+  thStatus:        { width: 130 },
   tr:              { borderRadius: 12, background: '#15263F' },
   td:              { padding: '18px 22px', verticalAlign: 'middle' },
   tdRole:          { width: 180 },
   tdClient:        { width: 220 },
-  tdAction:        { padding: '18px 22px', verticalAlign: 'middle', textAlign: 'right', minWidth: 360 },
+  tdStatus:        { width: 130, paddingRight: 10 },
+  tdAction:        { padding: '18px 22px', verticalAlign: 'middle', textAlign: 'right', minWidth: 400 },
   email:           { color: '#fff', fontSize: 14, fontWeight: 600 },
   noEmail:         { color: '#8A9BAD', fontSize: 13, fontStyle: 'italic', fontWeight: 400 },
   select:          { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 14, width: '100%', lineHeight: 1.4 },
