@@ -45,7 +45,7 @@ export default function RemedialsPage() {
     setLoading(true)
     const { data, error } = await supabase
       .from('remedials')
-      .select('*, inspections(door_location, door_asset_id, fire_rating, inspection_passed, recommended_action, engineer_name, engineer_id), projects(name, client_name, address, postcode)')
+      .select('*, inspections(door_location, door_asset_id, fire_rating, inspection_passed, recommended_action, other_repair_actions, engineer_name, engineer_id), projects(name, client_name, address, postcode)')
       .order('created_at', { ascending: false })
     if (error) console.error('fetchRemedials error:', error)
     setRemedials(data || [])
@@ -230,6 +230,9 @@ export default function RemedialsPage() {
                         {r.recommended_repair_actions && (
                           <div style={{ color: '#FF9800', fontSize: 11, marginTop: 3, lineHeight: '1.4' }}>{r.recommended_repair_actions}</div>
                         )}
+                        {r.inspections?.other_repair_actions && (
+                          <div style={{ color: '#FF9800', fontSize: 11, marginTop: 3, lineHeight: '1.4' }}>{r.inspections.other_repair_actions}</div>
+                        )}
                       </td>
                       <td style={s.td}>
                         <span style={{ background: sc.bg, color: sc.text, fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, textTransform: 'uppercase' }}>
@@ -289,6 +292,7 @@ export default function RemedialsPage() {
                 ['Inspection Result', viewTarget.inspections?.inspection_passed],
                 ['Recommended Action', viewTarget.recommended_action],
                 ['Repair Details', viewTarget.recommended_repair_actions],
+                ['Other Repair Actions', viewTarget.inspections?.other_repair_actions],
                 ['Status', STATUS_LABELS[viewTarget.status]],
                 ['Created', new Date(viewTarget.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })],
                 viewTarget.joiner_name && ['Joiner', viewTarget.joiner_name],
