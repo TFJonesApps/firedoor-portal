@@ -229,9 +229,9 @@ export default function UsersPage() {
                   <th style={{ ...s.th, ...s.thEmail }}>Email</th>
                   <th style={{ ...s.th, ...s.thName }}>Full Name</th>
                   <th style={{ ...s.th, ...s.thRole }}>Role</th>
+                  <th style={{ ...s.th, ...s.thAction }}>Actions</th>
                   <th style={{ ...s.th, ...s.thClient }}>Client</th>
                   <th style={{ ...s.th, ...s.thStatus }}>Status</th>
-                  <th style={{ ...s.th, ...s.thAction }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -263,25 +263,9 @@ export default function UsersPage() {
                           <option value="client">Client</option>
                         </select>
                       </td>
-                      <td style={s.td}>
-                        <select
-                          style={s.select}
-                          value={edit.client_id || ''}
-                          onChange={e => setField(user.id, 'client_id', e.target.value || null)}
-                          disabled={edit.role === 'admin' || edit.role === 'inspector'}
-                        >
-                          <option value="">— None —</option>
-                          {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
-                      </td>
-                      <td style={s.tdStatus}>
-                        <span style={{ ...s.badge, background: user.disabled ? '#F4433622' : '#4CAF5022', color: user.disabled ? '#F44336' : '#4CAF50', border: `1px solid ${user.disabled ? '#F44336' : '#4CAF50'}` }}>
-                          {user.disabled ? 'Off' : 'Active'}
-                        </span>
-                      </td>
                       <td style={s.tdAction}>
                         {pending ? (
-                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-start', alignItems: 'center' }}>
                             <span style={{ color: '#F44336', fontSize: 12, fontWeight: 600 }}>Delete?</span>
                             <button style={s.deleteConfirmBtn} onClick={() => deleteUser(user.id)} disabled={busy}>
                               {busy ? '…' : 'Yes'}
@@ -289,7 +273,7 @@ export default function UsersPage() {
                             <button style={s.cancelBtn} onClick={() => setConfirmDelete(null)}>No</button>
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-start' }}>
                             <button
                               style={{ ...s.saveBtn, opacity: dirty ? 1 : 0.3, cursor: dirty ? 'pointer' : 'default' }}
                               disabled={!dirty || saving === user.id}
@@ -307,6 +291,22 @@ export default function UsersPage() {
                             <button style={s.deleteBtn} onClick={() => setConfirmDelete(user.id)}>Delete</button>
                           </div>
                         )}
+                      </td>
+                      <td style={s.td}>
+                        <select
+                          style={s.select}
+                          value={edit.client_id || ''}
+                          onChange={e => setField(user.id, 'client_id', e.target.value || null)}
+                          disabled={edit.role === 'admin' || edit.role === 'inspector'}
+                        >
+                          <option value="">— None —</option>
+                          {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      </td>
+                      <td style={s.tdStatus}>
+                        <span style={{ ...s.badge, background: user.disabled ? '#F4433622' : '#4CAF5022', color: user.disabled ? '#F44336' : '#4CAF50', border: `1px solid ${user.disabled ? '#F44336' : '#4CAF50'}` }}>
+                          {user.disabled ? 'Off' : 'Active'}
+                        </span>
                       </td>
                     </tr>
                   )
@@ -331,7 +331,7 @@ const s = {
   headerRight:     { display: 'flex', alignItems: 'center', gap: 12 },
   logo:            { height: 42, objectFit: 'contain' },
   backBtn:         { background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '7px 14px', color: '#EEFF00', fontSize: 13, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' },
-  body:            { padding: '32px 28px', maxWidth: 1300, margin: '0 auto' },
+  body:            { padding: '32px 28px', maxWidth: 1400, margin: '0 auto' },
   title:           { color: '#fff', fontSize: 26, fontWeight: 800, margin: 0 },
   createBtn:       { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
   createForm:      { background: '#162840', borderRadius: 14, padding: '20px 24px', marginBottom: 24 },
@@ -346,16 +346,16 @@ const s = {
   tableWrap:       { background: '#162840', borderRadius: 14, overflow: 'hidden', marginTop: 24 },
   table:           { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
   th:              { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '14px 20px', textAlign: 'left', borderBottom: '1px solid #1A3A5C' },
-  thEmail:         { width: '20%' },
-  thName:          { width: '18%' },
-  thRole:          { width: '15%' },
+  thEmail:         { width: '18%' },
+  thName:          { width: '15%' },
+  thRole:          { width: '12%' },
+  thAction:        { width: '22%', textAlign: 'left' },
   thClient:        { width: '15%' },
-  thStatus:        { width: '10%' },
-  thAction:        { width: '22%', textAlign: 'right' },
+  thStatus:        { width: '10%', textAlign: 'center' },
   tr:              { borderBottom: '1px solid #1A3A5C' },
   td:              { padding: '14px 15px', verticalAlign: 'middle' },
-  tdStatus:        { padding: '14px 10px', verticalAlign: 'center' },
-  tdAction:        { padding: '14px 20px', verticalAlign: 'middle', textAlign: 'right', whiteSpace: 'nowrap' },
+  tdStatus:        { padding: '14px 10px', verticalAlign: 'middle', textAlign: 'center' },
+  tdAction:        { padding: '14px 20px', verticalAlign: 'middle', textAlign: 'left', whiteSpace: 'nowrap' },
   email:           { color: '#fff', fontSize: 13, fontWeight: 600, wordBreak: 'break-all' },
   noEmail:         { color: '#8A9BAD', fontSize: 12, fontStyle: 'italic' },
   select:          { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '8px 8px', color: '#fff', fontSize: 13, width: '100%' },
