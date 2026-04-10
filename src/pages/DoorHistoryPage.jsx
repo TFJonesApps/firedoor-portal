@@ -14,6 +14,7 @@ export default function DoorHistoryPage() {
   const [assetId, setAssetId]         = useState('')
   const [loading, setLoading]         = useState(false)
   const [inspections, setInspections] = useState([])
+  const [remedials, setRemedials]     = useState([])
   const [clients, setClients]         = useState([])
   const [clientFilter, setClientFilter] = useState('')
   const [expanded, setExpanded]       = useState(null)
@@ -33,7 +34,8 @@ async function search(id) {
   setSearchInput(term)
   setLoading(true)
   setSearched(true)
-  setInspections([]) // Clear old results immediately
+  setInspections([])
+  setRemedials([])
 
   // Use !inner to FORCE the relationship
   let query = supabase
@@ -49,17 +51,23 @@ async function search(id) {
     query = query.eq('projects.client_id', clientFilter)
   }
 
-  const { data, error } = await query
-  
-  if (error) {
-    console.error('Search error:', error)
+  const [insResult, remResult] = await Promise.all([
+    query,
+    supabase
+      .from('remedials')
+      .select('*, inspections(door_location, door_asset_id, fire_rating), projects(name, client_name, address, postcode)')
+      .eq('door_asset_id', term)
+      .eq('status', 'completed')
+  ])
+
+  if (insResult.error) {
+    console.error('Search error:', insResult.error)
     setInspections([])
   } else {
-    // If Barcode exists but belongs to a different client, 
-    // Supabase will return an empty array [] because of the !inner + eq filter
-    setInspections(data || [])
+    setInspections(insResult.data || [])
   }
-  
+  setRemedials(remResult.data || [])
+
   setLoading(false)
 }
 
@@ -82,13 +90,7 @@ async function search(id) {
     if (inspections.length === 0) return
     setGeneratingHistory(true)
     try {
-      // Fetch completed remedials for this asset to include evidence pages
-      const { data: remedials } = await supabase
-        .from('remedials')
-        .select('*, inspections(door_location, door_asset_id, fire_rating), projects(name, client_name, address, postcode)')
-        .eq('door_asset_id', assetId)
-        .eq('status', 'completed')
-      await generateFullHistoryReport(assetId, inspections, remedials || [])
+      await generateFullHistoryReport(assetId, inspections, remedials)
     } catch (e) {
       console.error('History PDF generation failed:', e)
     }
@@ -202,68 +204,170 @@ async function search(id) {
             </div>
 
             <div style={s.timeline}>
-              {inspections.map((ins, i) => {
-                const passed = ins.inspection_passed === 'Pass'
-                const isExpanded = expanded === ins.id
-                const date = new Date(ins.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+              {(() => {
+                // Merge inspections and remedials into a single timeline sorted by date descending
+                const items = [
+                  ...inspections.map(ins => ({ type: 'inspection', data: ins, date: ins.created_at })),
+                  ...remedials.map(rem => ({ type: 'remedial', data: rem, date: rem.completed_at || rem.created_at })),
+                ]
+                items.sort((a, b) => new Date(b.date) - new Date(a.date))
 
-                return (
-                  <div key={ins.id} style={s.timelineItem}>
-                    <div style={s.timelineSide}>
-                      <div style={{ ...s.dot, background: passed ? PASS : FAIL }} />
-                      {i < inspections.length - 1 && <div style={s.line} />}
-                    </div>
+                return items.map((item, i) => {
+                  if (item.type === 'inspection') {
+                    const ins = item.data
+                    const passed = ins.inspection_passed === 'Pass'
+                    const isExpanded = expanded === ins.id
+                    const date = new Date(ins.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{ ...s.timelineCard, borderLeft: `3px solid ${passed ? PASS : FAIL}`, cursor: 'pointer' }}
-                        onClick={() => setExpanded(isExpanded ? null : ins.id)}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                              <span style={{ ...s.badge, background: passed ? '#0A2E1A' : '#2E0A0A', color: passed ? PASS : FAIL }}>
-                                {passed ? 'PASS' : 'FAIL'}
-                              </span>
-                              <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>{date}</span>
-                            </div>
-                            <p style={{ color: '#8A9BAD', fontSize: 13, margin: '4px 0 0' }}>
-                              {ins.projects?.name || '—'} &middot; {(ins.engineer_name && !ins.engineer_name.includes('@')) ? ins.engineer_name : '—'}
-                            </p>
-                            {ins.projects?.client_name && (
-                              <p style={{ color: YELLOW, fontSize: 12, margin: '2px 0 0', fontWeight: 600 }}>{ins.projects.client_name}</p>
-                            )}
-                          </div>
-                          <span style={{ color: '#3A5570', fontSize: 18 }}>{isExpanded ? '−' : '+'}</span>
+                    return (
+                      <div key={`ins-${ins.id}`} style={s.timelineItem}>
+                        <div style={s.timelineSide}>
+                          <div style={{ ...s.dot, background: passed ? PASS : FAIL }} />
+                          {i < items.length - 1 && <div style={s.line} />}
                         </div>
 
-                        {isExpanded && (
-                          <div style={{ marginTop: 12, borderTop: '1px solid #1A3A5C', paddingTop: 12 }}>
-                            <DetailGrid ins={ins} />
-                            <PhotoRow ins={ins} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{ ...s.timelineCard, borderLeft: `3px solid ${passed ? PASS : FAIL}`, cursor: 'pointer' }}
+                            onClick={() => setExpanded(isExpanded ? null : ins.id)}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                  <span style={{ ...s.badge, background: passed ? '#0A2E1A' : '#2E0A0A', color: passed ? PASS : FAIL }}>
+                                    {passed ? 'PASS' : 'FAIL'}
+                                  </span>
+                                  <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>{date}</span>
+                                </div>
+                                <p style={{ color: '#8A9BAD', fontSize: 13, margin: '4px 0 0' }}>
+                                  {ins.projects?.name || '—'} &middot; {(ins.engineer_name && !ins.engineer_name.includes('@')) ? ins.engineer_name : '—'}
+                                </p>
+                                {ins.projects?.client_name && (
+                                  <p style={{ color: YELLOW, fontSize: 12, margin: '2px 0 0', fontWeight: 600 }}>{ins.projects.client_name}</p>
+                                )}
+                              </div>
+                              <span style={{ color: '#3A5570', fontSize: 18 }}>{isExpanded ? '−' : '+'}</span>
+                            </div>
 
-                            {(ins.recommended_action || ins.recommended_repair_actions) && (
-                              <div style={{ marginTop: 10, padding: '10px 12px', background: '#0D1F35', borderRadius: 8 }}>
-                                <p style={{ color: '#8A9BAD', fontSize: 11, margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recommended Actions</p>
-                                {ins.recommended_action && <p style={{ color: '#CBD5E1', fontSize: 13, margin: '0 0 4px' }}>{ins.recommended_action}</p>}
-                                {ins.recommended_repair_actions && <p style={{ color: '#CBD5E1', fontSize: 13, margin: 0 }}>{ins.recommended_repair_actions}</p>}
+                            {isExpanded && (
+                              <div style={{ marginTop: 12, borderTop: '1px solid #1A3A5C', paddingTop: 12 }}>
+                                <DetailGrid ins={ins} />
+                                <PhotoRow ins={ins} />
+
+                                {(ins.recommended_action || ins.recommended_repair_actions) && (
+                                  <div style={{ marginTop: 10, padding: '10px 12px', background: '#0D1F35', borderRadius: 8 }}>
+                                    <p style={{ color: '#8A9BAD', fontSize: 11, margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recommended Actions</p>
+                                    {ins.recommended_action && <p style={{ color: '#CBD5E1', fontSize: 13, margin: '0 0 4px' }}>{ins.recommended_action}</p>}
+                                    {ins.recommended_repair_actions && <p style={{ color: '#CBD5E1', fontSize: 13, margin: 0 }}>{ins.recommended_repair_actions}</p>}
+                                  </div>
+                                )}
+
+                                <button
+                                  style={{ ...s.pdfBtn, opacity: generating === ins.id ? 0.6 : 1 }}
+                                  disabled={generating === ins.id}
+                                  onClick={e => { e.stopPropagation(); downloadPdf(ins) }}
+                                >
+                                  {generating === ins.id ? 'Generating...' : 'Download PDF Report'}
+                                </button>
                               </div>
                             )}
-
-                            <button
-                              style={{ ...s.pdfBtn, opacity: generating === ins.id ? 0.6 : 1 }}
-                              disabled={generating === ins.id}
-                              onClick={e => { e.stopPropagation(); downloadPdf(ins) }}
-                            >
-                              {generating === ins.id ? 'Generating...' : 'Download PDF Report'}
-                            </button>
                           </div>
-                        )}
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  // Remedial card
+                  const rem = item.data
+                  const isExpanded = expanded === `rem-${rem.id}`
+                  const date = new Date(rem.completed_at || rem.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                  const beforePhotos = (rem.before_photo_urls || []).filter(Boolean)
+                  const afterPhotos = (rem.after_photo_urls || []).filter(Boolean)
+
+                  return (
+                    <div key={`rem-${rem.id}`} style={s.timelineItem}>
+                      <div style={s.timelineSide}>
+                        <div style={{ ...s.dot, background: PASS }} />
+                        {i < items.length - 1 && <div style={s.line} />}
+                      </div>
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{ ...s.timelineCard, borderLeft: `3px solid ${PASS}`, cursor: 'pointer' }}
+                          onClick={() => setExpanded(isExpanded ? null : `rem-${rem.id}`)}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <span style={{ ...s.badge, background: '#0A2E1A', color: PASS }}>REPAIRED</span>
+                                <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>{date}</span>
+                              </div>
+                              <p style={{ color: '#8A9BAD', fontSize: 13, margin: '4px 0 0' }}>
+                                {rem.recommended_action || 'Repair'} &middot; {rem.joiner_name || '—'}
+                              </p>
+                              {rem.projects?.client_name && (
+                                <p style={{ color: YELLOW, fontSize: 12, margin: '2px 0 0', fontWeight: 600 }}>{rem.projects.client_name}</p>
+                              )}
+                            </div>
+                            <span style={{ color: '#3A5570', fontSize: 18 }}>{isExpanded ? '−' : '+'}</span>
+                          </div>
+
+                          {isExpanded && (
+                            <div style={{ marginTop: 12, borderTop: '1px solid #1A3A5C', paddingTop: 12 }}>
+                              {/* Repair info */}
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: '#1A3A5C', borderRadius: 8, overflow: 'hidden', marginBottom: 10 }}>
+                                {[
+                                  ['Action', rem.recommended_action],
+                                  ['Joiner', rem.joiner_name],
+                                  ['Completed', date],
+                                  ['Project', rem.projects?.name],
+                                ].filter(([, v]) => v).map(([label, value]) => (
+                                  <div key={label} style={{ background: '#162840', padding: '8px 10px' }}>
+                                    <p style={{ color: '#8A9BAD', fontSize: 11, margin: 0 }}>{label}</p>
+                                    <p style={{ color: '#fff', fontSize: 13, fontWeight: 600, margin: '2px 0 0' }}>{value}</p>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Completion notes */}
+                              {rem.completion_notes && (
+                                <div style={{ padding: '10px 12px', background: '#0D1F35', borderRadius: 8, marginBottom: 10 }}>
+                                  <p style={{ color: '#8A9BAD', fontSize: 11, margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Completion Notes</p>
+                                  <p style={{ color: '#CBD5E1', fontSize: 13, margin: 0 }}>{rem.completion_notes}</p>
+                                </div>
+                              )}
+
+                              {/* Before photos */}
+                              {beforePhotos.length > 0 && (
+                                <div style={{ marginBottom: 10 }}>
+                                  <p style={{ color: '#8A9BAD', fontSize: 11, margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Before Photos</p>
+                                  <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
+                                    {beforePhotos.map((url, idx) => (
+                                      <img key={idx} src={url} alt={`Before ${idx + 1}`} style={{ width: 100, height: 75, objectFit: 'cover', borderRadius: 6, border: '1px solid #1A3A5C' }} />
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* After photos */}
+                              {afterPhotos.length > 0 && (
+                                <div>
+                                  <p style={{ color: '#8A9BAD', fontSize: 11, margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>After Photos</p>
+                                  <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
+                                    {afterPhotos.map((url, idx) => (
+                                      <img key={idx} src={url} alt={`After ${idx + 1}`} style={{ width: 100, height: 75, objectFit: 'cover', borderRadius: 6, border: `1px solid ${PASS}44` }} />
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })
+              })()}
             </div>
           </>
         )}
