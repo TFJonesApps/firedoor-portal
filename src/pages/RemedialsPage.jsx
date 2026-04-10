@@ -291,6 +291,9 @@ export default function RemedialsPage() {
                 ['Repair Details', viewTarget.recommended_repair_actions],
                 ['Status', STATUS_LABELS[viewTarget.status]],
                 ['Created', new Date(viewTarget.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })],
+                viewTarget.joiner_name && ['Joiner', viewTarget.joiner_name],
+                viewTarget.completed_at && ['Completed', new Date(viewTarget.completed_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })],
+                viewTarget.completion_notes && ['Completion Notes', viewTarget.completion_notes],
                 viewTarget.closed_reason && ['Close Reason', viewTarget.closed_reason],
                 viewTarget.closed_at && ['Closed', new Date(viewTarget.closed_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })],
               ].filter(Boolean).filter(([, v]) => v).map(([label, value]) => (
