@@ -449,6 +449,7 @@ function InspectionCard({ inspection: ins, project, expanded, onToggle, onPhoto,
     ['Recommended Action',   ins.recommended_action],
     ['Remedial Works',       ins.remedial_works_completed],
     ['Repair Actions',       ins.recommended_repair_actions],
+    ['Other Repair Actions', ins.other_repair_actions],
     ['Replacement Reason',   ins.replacement_reason],
     ['Inspector',            (ins.engineer_name && !ins.engineer_name.includes('@')) ? ins.engineer_name : (project?.engineer_name && !project.engineer_name.includes('@')) ? project.engineer_name : ins.engineer_name],
   ].filter(([, v]) => v)

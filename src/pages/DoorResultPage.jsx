@@ -155,7 +155,7 @@ export default function DoorResultPage() {
             </div>
 
             {/* Recommended actions */}
-            {(inspection.recommended_action || inspection.recommended_repair_actions) && (
+            {(inspection.recommended_action || inspection.recommended_repair_actions || inspection.other_repair_actions) && (
               <div style={{ ...s.card, borderLeft: `3px solid ${passed ? '#4CAF50' : '#F44336'}` }}>
                 <p style={s.cardTitle}>Recommended Actions</p>
                 {inspection.recommended_action && (
@@ -163,6 +163,9 @@ export default function DoorResultPage() {
                 )}
                 {inspection.recommended_repair_actions && (
                   <p style={s.actionText}>{inspection.recommended_repair_actions}</p>
+                )}
+                {inspection.other_repair_actions && (
+                  <p style={{ ...s.actionText, color: '#FF9800' }}>{inspection.other_repair_actions}</p>
                 )}
               </div>
             )}

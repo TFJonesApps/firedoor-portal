@@ -400,8 +400,9 @@ async function inspectionPage(doc, logo, project, ins, pageNum, totalPages) {
     { title: 'Outcome & Actions', fields: [ 
       ['What is the recommended action?', ins.recommended_action], 
       ['Have remedial works been completed?', ins.remedial_works_completed], 
-      ['What repair actions are recommended?', ins.recommended_repair_actions], 
-      ['What is the reason for replacement?', ins.replacement_reason], 
+      ['What repair actions are recommended?', ins.recommended_repair_actions],
+      ['Other repair actions', ins.other_repair_actions],
+      ['What is the reason for replacement?', ins.replacement_reason],
     ]} 
   ] 
 

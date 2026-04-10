@@ -265,11 +265,12 @@ async function search(id) {
                                 <DetailGrid ins={ins} />
                                 <PhotoRow ins={ins} />
 
-                                {(ins.recommended_action || ins.recommended_repair_actions) && (
+                                {(ins.recommended_action || ins.recommended_repair_actions || ins.other_repair_actions) && (
                                   <div style={{ marginTop: 10, padding: '10px 12px', background: '#0D1F35', borderRadius: 8 }}>
                                     <p style={{ color: '#8A9BAD', fontSize: 11, margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recommended Actions</p>
                                     {ins.recommended_action && <p style={{ color: '#CBD5E1', fontSize: 13, margin: '0 0 4px' }}>{ins.recommended_action}</p>}
-                                    {ins.recommended_repair_actions && <p style={{ color: '#CBD5E1', fontSize: 13, margin: 0 }}>{ins.recommended_repair_actions}</p>}
+                                    {ins.recommended_repair_actions && <p style={{ color: '#CBD5E1', fontSize: 13, margin: '0 0 4px' }}>{ins.recommended_repair_actions}</p>}
+                                    {ins.other_repair_actions && <p style={{ color: '#FF9800', fontSize: 13, margin: 0 }}>{ins.other_repair_actions}</p>}
                                   </div>
                                 )}
 
