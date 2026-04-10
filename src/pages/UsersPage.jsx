@@ -228,8 +228,8 @@ export default function UsersPage() {
             <table style={s.table}>
               <thead>
                 <tr>
-                  <th style={s.th}>Email</th>
-                  <th style={s.th}>Full Name</th>
+                  <th style={{ ...s.th, ...s.thEmail }}>Email</th>
+                  <th style={{ ...s.th, ...s.thName }}>Full Name</th>
                   <th style={{ ...s.th, ...s.thRole }}>Role</th>
                   <th style={{ ...s.th, ...s.thClient }}>Client</th>
                   <th style={s.th}>Status</th>
@@ -283,7 +283,7 @@ export default function UsersPage() {
                       </td>
                       <td style={s.tdAction}>
                         {pending ? (
-                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center' }}>
                             <span style={{ color: '#F44336', fontSize: 13, fontWeight: 600 }}>Delete?</span>
                             <button style={s.deleteConfirmBtn} onClick={() => deleteUser(user.id)} disabled={busy}>
                               {busy ? '…' : 'Yes, Delete'}
@@ -291,7 +291,7 @@ export default function UsersPage() {
                             <button style={s.cancelBtn} onClick={() => setConfirmDelete(null)}>Cancel</button>
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                             <button
                               style={{ ...s.saveBtn, opacity: dirty ? 1 : 0.3, cursor: dirty ? 'pointer' : 'default' }}
                               disabled={!dirty || saving === user.id}
@@ -333,31 +333,33 @@ const s = {
   headerRight:     { display: 'flex', alignItems: 'center', gap: 12 },
   logo:            { height: 42, objectFit: 'contain' },
   backBtn:         { background: 'none', border: '1px solid #EEFF00', borderRadius: 4, padding: '7px 14px', color: '#EEFF00', fontSize: 13, fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' },
-  body:            { padding: '36px 32px', maxWidth: 1180, margin: '0 auto' },
+  body:            { padding: '40px 36px', maxWidth: 1240, margin: '0 auto' },
   title:           { color: '#fff', fontSize: 26, fontWeight: 800, margin: 0 },
   createBtn:       { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' },
-  createForm:      { background: '#162840', borderRadius: 14, padding: '22px 26px', marginBottom: 28 },
+  createForm:      { background: '#162840', borderRadius: 16, padding: '24px 28px', marginBottom: 30 },
   formGrid:        { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 18 },
   formField:       { display: 'flex', flexDirection: 'column', gap: 6 },
   label:           { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' },
-  input:           { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '10px 12px', color: '#fff', fontSize: 14, outline: 'none' },
-  tableInput:      { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 8, padding: '8px 12px', color: '#fff', fontSize: 14, width: '100%', outline: 'none' },
+  input:           { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 14, outline: 'none', lineHeight: 1.4 },
+  tableInput:      { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 14, width: '100%', outline: 'none', lineHeight: 1.4 },
   error:           { color: '#F44336', fontSize: 13, margin: '0 0 12px' },
   centred:         { display: 'flex', justifyContent: 'center', paddingTop: 60 },
   empty:           { color: '#8A9BAD', textAlign: 'center', paddingTop: 60 },
-  tableWrap:       { background: '#162840', borderRadius: 16, overflow: 'hidden', marginTop: 28 },
-  table:           { width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
-  th:              { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '16px 22px', textAlign: 'left', borderBottom: '1px solid #1A3A5C' },
-  thRole:          { width: 150 },
-  thClient:        { width: 170 },
-  tr:              { borderBottom: '1px solid #1A3A5C' },
-  td:              { padding: '16px 22px', verticalAlign: 'middle' },
-  tdRole:          { width: 150 },
-  tdClient:        { width: 170 },
-  tdAction:        { padding: '16px 22px', verticalAlign: 'middle', textAlign: 'right', minWidth: 300 },
+  tableWrap:       { background: '#162840', borderRadius: 16, overflow: 'hidden', marginTop: 28, padding: 6 },
+  table:           { width: '100%', borderCollapse: 'separate', borderSpacing: '0 10px', tableLayout: 'fixed' },
+  th:              { color: '#8A9BAD', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '14px 22px 10px', textAlign: 'left', borderBottom: '1px solid #1A3A5C' },
+  thEmail:         { width: 230 },
+  thName:          { width: 190 },
+  thRole:          { width: 180 },
+  thClient:        { width: 220 },
+  tr:              { borderRadius: 12, background: '#15263F' },
+  td:              { padding: '18px 22px', verticalAlign: 'middle' },
+  tdRole:          { width: 180 },
+  tdClient:        { width: 220 },
+  tdAction:        { padding: '18px 22px', verticalAlign: 'middle', textAlign: 'right', minWidth: 360 },
   email:           { color: '#fff', fontSize: 14, fontWeight: 600 },
   noEmail:         { color: '#8A9BAD', fontSize: 13, fontStyle: 'italic', fontWeight: 400 },
-  select:          { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 10, padding: '9px 12px', color: '#fff', fontSize: 14, width: '100%' },
+  select:          { background: '#0D1F35', border: '1px solid #1A3A5C', borderRadius: 10, padding: '12px 14px', color: '#fff', fontSize: 14, width: '100%', lineHeight: 1.4 },
   badge:           { display: 'inline-block', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700 },
   saveBtn:         { background: '#EEFF00', color: '#0D1F35', border: 'none', borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
   disableBtn:      { borderRadius: 10, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' },
